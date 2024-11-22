@@ -26,6 +26,12 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    if (!user?.id) {
+      console.error('No user ID found')
+      return
+    }
+
     setIsLoading(true)
 
     try {
@@ -39,7 +45,7 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
       const { error: profileError } = await supabase
         .from('profiles')
         .update({ full_name: fullName })
-        .eq('id', user?.id)
+        .eq('id', user.id)
 
       if (profileError) throw profileError
 
@@ -49,6 +55,10 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  if (!user) {
+    return null
   }
 
   return (
@@ -74,7 +84,7 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
             <Label htmlFor="email">Email</Label>
             <Input
               id="email"
-              value={user?.email}
+              value={user.email}
               disabled
               className="bg-gray-100"
             />
