@@ -19,12 +19,35 @@ export function useAuth() {
   const [loading, setLoading] = useState(true)
   const [subscription, setSubscription] = useState<Subscription | null>(null)
 
+  // Extract subscription fetching logic
+  const fetchSubscription = async (userId: string, mounted: boolean) => {
+    try {
+      const { data: subscriptionData, error } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('user_id', userId)
+        .single()
+      
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching subscription:', error)
+      }
+      
+      if (mounted) {
+        setSubscription(subscriptionData)
+      }
+    } catch (error) {
+      console.error('Error in subscription fetch:', error)
+      if (mounted) {
+        setSubscription(null)
+      }
+    }
+  }
+
   useEffect(() => {
     let mounted = true
 
     async function getInitialSession() {
       try {
-        setLoading(true)
         const {
           data: { session },
         } = await supabase.auth.getSession()
@@ -36,16 +59,14 @@ export function useAuth() {
             // ... map other properties
           }
           setUser(localUser)
-          
-          const { data: subscriptionData } = await supabase
-            .from('subscriptions')
-            .select('*')
-            .eq('user_id', session.user.id)
-            .single()
-          setSubscription(subscriptionData)
+          await fetchSubscription(session.user.id, mounted)
         }
       } catch (error) {
         console.error('Error getting session:', error)
+        if (mounted) {
+          setUser(null)
+          setSubscription(null)
+        }
       } finally {
         if (mounted) {
           setLoading(false)
@@ -61,21 +82,16 @@ export function useAuth() {
           const localUser: LocalUser = {
             id: session.user.id,
             email: session.user.email || '',
-            // ... map other properties
           }
           setUser(localUser)
-          
-          const { data: subscriptionData } = await supabase
-            .from('subscriptions')
-            .select('*')
-            .eq('user_id', session.user.id)
-            .single()
-          setSubscription(subscriptionData)
+          await fetchSubscription(session.user.id, mounted)
         } else {
           setUser(null)
           setSubscription(null)
         }
-        setLoading(false)
+        if (mounted) {
+          setLoading(false)
+        }
       }
     )
 
