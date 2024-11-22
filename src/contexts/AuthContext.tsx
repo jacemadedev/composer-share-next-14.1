@@ -28,9 +28,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [subscription, setSubscription] = useState<Subscription | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isInitialized, setIsInitialized] = useState(false)
 
   const resetAuth = async () => {
     try {
+      setIsLoading(true)
       // Clear all storage
       localStorage.clear()
       sessionStorage.clear()
@@ -47,6 +49,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       window.location.reload()
     } catch (error) {
       console.error('Error resetting auth:', error)
+      setError('Failed to reset authentication')
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -58,17 +63,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq('user_id', userId)
         .single()
 
-      if (subError) throw subError
-      setSubscription(data)
+      if (subError && subError.code !== 'PGRST116') {
+        console.error('Subscription fetch error:', subError)
+      }
+      setSubscription(data || null)
     } catch (err) {
       console.error('Error fetching subscription:', err)
       setSubscription(null)
     }
-  }
-
-  const refreshSubscription = async () => {
-    if (!user) return Promise.resolve()
-    return fetchSubscription(user.id)
   }
 
   useEffect(() => {
@@ -76,10 +78,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     async function initializeAuth() {
       try {
+        console.log('Initializing auth...')
         const { data: { session }, error: sessionError } = await supabase.auth.getSession()
         
         if (sessionError) throw sessionError
 
+        if (mounted) {
+          if (session?.user) {
+            console.log('User found:', session.user.email)
+            setUser({
+              id: session.user.id,
+              email: session.user.email || '',
+            })
+            await fetchSubscription(session.user.id)
+          } else {
+            console.log('No user found')
+            setUser(null)
+            setSubscription(null)
+          }
+        }
+      } catch (err) {
+        console.error('Auth initialization error:', err)
+        if (mounted) {
+          setError('Failed to initialize authentication')
+        }
+      } finally {
+        if (mounted) {
+          setIsLoading(false)
+          setIsInitialized(true)
+        }
+      }
+    }
+
+    // Set timeout for initialization
+    const timeoutId = setTimeout(() => {
+      if (!isInitialized && mounted) {
+        console.log('Auth initialization timeout')
+        resetAuth()
+      }
+    }, 10000)
+
+    initializeAuth()
+
+    const { data: { subscription: authListener } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('Auth state changed:', event)
+        
         if (mounted) {
           if (session?.user) {
             setUser({
@@ -87,41 +131,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               email: session.user.email || '',
             })
             await fetchSubscription(session.user.id)
+          } else {
+            setUser(null)
+            setSubscription(null)
           }
           setIsLoading(false)
         }
-      } catch (err) {
-        console.error('Auth initialization error:', err)
-        if (mounted) {
-          setError('Failed to initialize authentication')
-          setIsLoading(false)
-        }
-      }
-    }
-
-    initializeAuth()
-
-    const { data: { subscription: authListener } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (session?.user) {
-          setUser({
-            id: session.user.id,
-            email: session.user.email || '',
-          })
-          await fetchSubscription(session.user.id)
-        } else {
-          setUser(null)
-          setSubscription(null)
-        }
-        setIsLoading(false)
       }
     )
 
     return () => {
       mounted = false
+      clearTimeout(timeoutId)
       authListener.unsubscribe()
     }
-  }, [])
+  }, [isInitialized])
+
+  const refreshSubscription = async () => {
+    if (!user) return Promise.resolve()
+    return fetchSubscription(user.id)
+  }
 
   return (
     <AuthContext.Provider 
