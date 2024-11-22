@@ -85,6 +85,20 @@ async function handleSuccessfulSubscription(session: Stripe.Checkout.Session) {
     console.error('Error updating user subscription status:', error)
     throw new Error('Failed to update subscription status')
   }
+
+  const { error: settingsError } = await supabase
+    .from('user_settings')
+    .update({ 
+      plan: 'premium',
+      is_premium: true,
+      updated_at: new Date().toISOString()
+    })
+    .eq('user_id', session.client_reference_id!)
+
+  if (settingsError) {
+    console.error('Error updating user settings:', settingsError)
+    throw new Error('Failed to update user settings')
+  }
 }
 
 async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
@@ -126,6 +140,20 @@ async function handleSubscriptionCancellation(subscription: Stripe.Subscription)
   if (error) {
     console.error('Error updating subscription status:', error)
     throw new Error('Failed to update subscription status')
+  }
+
+  const { error: settingsError } = await supabase
+    .from('user_settings')
+    .update({ 
+      plan: 'free',
+      is_premium: false,
+      updated_at: new Date().toISOString()
+    })
+    .eq('user_id', subscription.customer)
+
+  if (settingsError) {
+    console.error('Error updating user settings:', settingsError)
+    throw new Error('Failed to update user settings')
   }
 }
 

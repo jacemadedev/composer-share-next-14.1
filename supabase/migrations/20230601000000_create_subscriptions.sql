@@ -33,6 +33,7 @@ CREATE TABLE user_settings (
   is_premium BOOLEAN DEFAULT false,
   theme TEXT DEFAULT 'light',
   openai_api_key TEXT,
+  plan TEXT DEFAULT 'free',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
@@ -86,9 +87,9 @@ BEGIN
   INSERT INTO public.profiles (id, full_name, avatar_url)
   VALUES (new.id, new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'avatar_url');
   
-  -- Insert into user_settings with default values
-  INSERT INTO public.user_settings (user_id, is_premium, theme)
-  VALUES (new.id, false, 'light');
+  -- Insert into user_settings with default values including plan
+  INSERT INTO public.user_settings (user_id, is_premium, theme, plan)
+  VALUES (new.id, false, 'light', 'free');
   
   RETURN new;
 END;

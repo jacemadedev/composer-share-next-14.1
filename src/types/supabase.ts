@@ -82,16 +82,19 @@ export interface Database {
           user_id: string;
           is_premium: boolean;
           openai_api_key: string | null;
+          plan: string;
         };
         Insert: {
           user_id: string;
           is_premium?: boolean;
           openai_api_key?: string | null;
+          plan?: string;
         };
         Update: {
           user_id?: string;
           is_premium?: boolean;
           openai_api_key?: string | null;
+          plan?: string;
         };
       };
     };

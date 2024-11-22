@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 interface AuthContextType {
   user: LocalUser | null
   subscription: Subscription | null
+  plan: string | null
   isLoading: boolean
   error: string | null
   resetAuth: () => Promise<void>
@@ -26,6 +27,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<LocalUser | null>(null)
   const [subscription, setSubscription] = useState<Subscription | null>(null)
+  const [plan, setPlan] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isInitialized, setIsInitialized] = useState(false)
@@ -45,6 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await supabase.auth.signOut()
       setUser(null)
       setSubscription(null)
+      setPlan(null)
       setError(null)
       
       // Instead of reloading, just reset the state
@@ -57,9 +60,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const fetchSubscription = useCallback(async (userId: string) => {
+  const fetchUserData = useCallback(async (userId: string) => {
     try {
-      const { data, error: subError } = await supabase
+      // Fetch subscription
+      const { data: subData, error: subError } = await supabase
         .from('subscriptions')
         .select('*')
         .eq('user_id', userId)
@@ -68,10 +72,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (subError && subError.code !== 'PGRST116') {
         console.error('Subscription fetch error:', subError)
       }
-      setSubscription(data || null)
+      setSubscription(subData || null)
+
+      // Fetch user settings including plan
+      const { data: settingsData, error: settingsError } = await supabase
+        .from('user_settings')
+        .select('plan')
+        .eq('user_id', userId)
+        .single()
+
+      if (settingsError) {
+        console.error('Settings fetch error:', settingsError)
+      } else {
+        setPlan(settingsData?.plan || 'free')
+      }
     } catch (err) {
-      console.error('Error fetching subscription:', err)
+      console.error('Error fetching user data:', err)
       setSubscription(null)
+      setPlan('free')
     }
   }, [])
 
@@ -100,11 +118,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             id: session.user.id,
             email: session.user.email || '',
           })
-          await fetchSubscription(session.user.id)
+          fetchUserData(session.user.id)
         } else {
           console.log('No user found')
           setUser(null)
           setSubscription(null)
+          setPlan(null)
         }
         
         setIsLoading(false)
@@ -137,10 +156,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             id: session.user.id,
             email: session.user.email || '',
           })
-          await fetchSubscription(session.user.id)
+          fetchUserData(session.user.id)
         } else {
           setUser(null)
           setSubscription(null)
+          setPlan(null)
         }
         setIsLoading(false)
       }
@@ -154,12 +174,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       clearTimeout(timeoutId)
       authListener.unsubscribe()
     }
-  }, [isInitialized, fetchSubscription, resetAuth])
+  }, [isInitialized, fetchUserData, resetAuth])
 
   const refreshSubscription = useCallback(async () => {
     if (!user) return Promise.resolve()
-    return fetchSubscription(user.id)
-  }, [user, fetchSubscription])
+    return fetchUserData(user.id)
+  }, [user, fetchUserData])
 
   // Add debug information to help diagnose issues
   console.log('Auth state:', {
@@ -175,6 +195,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user,
         subscription,
+        plan,
         isLoading,
         error,
         resetAuth,
