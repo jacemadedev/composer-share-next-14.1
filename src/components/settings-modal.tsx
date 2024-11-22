@@ -20,25 +20,25 @@ interface SettingsModalProps {
   onClose: () => void
 }
 
-type UserSettings = Database['public']['Tables']['user_settings']['Row']
+type UserSettingsUpdate = Database['public']['Tables']['user_settings']['Update']
 
-export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
+export function SettingsModal(props: SettingsModalProps) {
+  const { isOpen, onClose } = props
   const { user } = useAuth()
   const [theme, setTheme] = useState('light')
   const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
     if (user) {
-      // Fetch current settings
       const fetchSettings = async () => {
         const { data, error } = await supabase
           .from('user_settings')
-          .select('*')
+          .select('theme')
           .eq('user_id', user.id)
           .single()
 
-        if (!error && data) {
-          setTheme(data.theme || 'light')
+        if (!error && data?.theme) {
+          setTheme(data.theme)
         }
       }
 
@@ -57,12 +57,14 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     setIsLoading(true)
 
     try {
+      const updateData: UserSettingsUpdate = {
+        theme,
+        updated_at: new Date().toISOString()
+      }
+
       const { error } = await supabase
         .from('user_settings')
-        .update({ 
-          theme,
-          updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('user_id', user.id)
 
       if (error) throw error

@@ -19,7 +19,8 @@ interface ProfileModalProps {
   onClose: () => void
 }
 
-export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
+export function ProfileModal(props: ProfileModalProps) {
+  const { isOpen, onClose } = props
   const { user } = useAuth()
   const [fullName, setFullName] = useState(user?.user_metadata?.name || '')
   const [isLoading, setIsLoading] = useState(false)
