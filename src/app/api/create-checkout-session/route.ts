@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
-import { supabase } from '@/lib/supabase'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -9,24 +8,19 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function POST(req: Request) {
   try {
-    const { priceId, userId } = await req.json()
+    const { priceId, userId, userEmail } = await req.json()
 
-    let userEmail: string | null = null
+    let email = userEmail
 
-    // Try to get user email through admin client first
-    if (supabaseAdmin) {
+    if (!email && supabaseAdmin) {
       const { data: { user }, error: authError } = await supabaseAdmin.auth.admin.getUserById(userId)
       if (!authError && user?.email) {
-        userEmail = user.email
+        email = user.email
       }
     }
 
-    // Fallback: try to get user through auth API
-    if (!userEmail) {
-      const { data: { session }, error: authError } = await supabase.auth.getSession()
-      if (!authError && session?.user?.email) {
-        userEmail = session.user.email
-      }
+    if (!email) {
+      console.warn('No email found for user:', userId)
     }
 
     const sessionConfig: Stripe.Checkout.SessionCreateParams = {
@@ -46,9 +40,8 @@ export async function POST(req: Request) {
       },
     }
 
-    // Only add customer_email if we have it
-    if (userEmail) {
-      sessionConfig.customer_email = userEmail
+    if (email) {
+      sessionConfig.customer_email = email
     }
 
     const session = await stripe.checkout.sessions.create(sessionConfig)

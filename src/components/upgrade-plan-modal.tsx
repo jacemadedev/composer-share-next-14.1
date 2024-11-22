@@ -40,6 +40,7 @@ export function UpgradePlanModal({ isOpen, onClose, isAuthenticated, userId }: U
         body: JSON.stringify({
           priceId,
           userId,
+          userEmail: user?.email,
         }),
       })
 
