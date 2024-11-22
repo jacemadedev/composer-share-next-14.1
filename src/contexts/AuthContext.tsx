@@ -63,35 +63,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchUserData = useCallback(async (userId: string) => {
     try {
       // Fetch subscription
-      const { data: subData, error: subError } = await supabase
+      const { data: subscriptionData, error: subscriptionError } = await supabase
         .from('subscriptions')
-        .select('*')
+        .select('status')
         .eq('user_id', userId)
-        .single()
+        .maybeSingle();
 
-      if (subError && subError.code !== 'PGRST116') {
-        console.error('Subscription fetch error:', subError)
+      if (subscriptionError) {
+        console.error('Subscription fetch error:', subscriptionError);
+        setSubscription(null);
+      } else {
+        setSubscription(subscriptionData);
       }
-      setSubscription(subData || null)
 
-      // Fetch user settings including plan
+      // Fetch user settings
       const { data: settingsData, error: settingsError } = await supabase
         .from('user_settings')
-        .select('plan')
+        .select('plan, is_premium')
         .eq('user_id', userId)
-        .single()
+        .maybeSingle();
 
       if (settingsError) {
-        console.error('Settings fetch error:', settingsError)
+        console.error('Settings fetch error:', settingsError);
+        setPlan('free');
       } else {
-        setPlan(settingsData?.plan || 'free')
+        setPlan(settingsData?.plan || 'free');
       }
     } catch (err) {
-      console.error('Error fetching user data:', err)
-      setSubscription(null)
-      setPlan('free')
+      console.error('Error fetching user data:', err);
+      setSubscription(null);
+      setPlan('free');
     }
-  }, [])
+  }, []);
 
   useEffect(() => {
     let mounted = true
