@@ -48,27 +48,11 @@ export function useAuth() {
   useEffect(() => {
     let mounted = true
 
-    // First, check for an existing session in localStorage
-    const existingSession = supabase.auth.session()
-    
-    if (existingSession?.user) {
-      setUser({
-        id: existingSession.user.id,
-        email: existingSession.user.email || '',
-      })
-      fetchSubscription(existingSession.user.id, mounted)
-    }
-
     async function getInitialSession() {
       try {
-        const {
-          data: { session },
-          error: sessionError,
-        } = await supabase.auth.getSession()
-
-        if (sessionError) {
-          throw sessionError
-        }
+        setLoading(true)
+        // Get current session using the new API
+        const { data: { session } } = await supabase.auth.getSession()
 
         if (mounted) {
           if (session?.user) {
@@ -98,7 +82,6 @@ export function useAuth() {
 
     getInitialSession()
 
-    // Listen for auth changes
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state changed:', event)
@@ -125,32 +108,6 @@ export function useAuth() {
     }
   }, [])
 
-  // Add a method to force refresh the session
-  const refreshSession = async () => {
-    try {
-      setLoading(true)
-      const { data: { session }, error } = await supabase.auth.refreshSession()
-      
-      if (error) throw error
-      
-      if (session?.user) {
-        setUser({
-          id: session.user.id,
-          email: session.user.email || '',
-        })
-        await fetchSubscription(session.user.id, true)
-      } else {
-        setUser(null)
-        setSubscription(null)
-      }
-    } catch (error) {
-      console.error('Session refresh error:', error)
-      setError(error instanceof Error ? error.message : 'Failed to refresh session')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  return { user, loading, subscription, error, refreshSession }
+  return { user, loading, subscription, error }
 }
 

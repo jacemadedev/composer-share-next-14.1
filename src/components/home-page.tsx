@@ -11,6 +11,7 @@ import ChatInterface from '@/components/chat-interface'
 import { AuthModal } from '@/components/auth-modal'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
+import { useSearchParams } from 'next/navigation'
 
 type Conversation = {
   id: string;
@@ -25,14 +26,29 @@ export default function HomePage() {
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null)
   const [showAuthModal, setShowAuthModal] = useState(false)
-  const { user, loading, subscription, error, refreshSession } = useAuth()
+  const { user, loading, subscription, error } = useAuth()
   const [apiKey, setApiKey] = useState<string | null>(null)
+  const searchParams = useSearchParams()
 
+  // Handle Stripe checkout return
   useEffect(() => {
-    if (!user && !loading) {
-      refreshSession()
+    const sessionId = searchParams?.get('session_id')
+    if (sessionId) {
+      const verifySession = async () => {
+        try {
+          const response = await fetch(`/api/verify-session?session_id=${sessionId}`)
+          if (!response.ok) {
+            throw new Error('Failed to verify session')
+          }
+          // Clear the URL parameters after successful verification
+          window.history.replaceState({}, '', window.location.pathname)
+        } catch (err) {
+          console.error('Error verifying session:', err)
+        }
+      }
+      verifySession()
     }
-  }, [user, loading, refreshSession])
+  }, [searchParams])
 
   const handleApiKeySubmit = async (key: string) => {
     setApiKey(key)
