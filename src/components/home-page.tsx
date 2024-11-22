@@ -25,7 +25,7 @@ export default function HomePage() {
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null)
   const [showAuthModal, setShowAuthModal] = useState(false)
-  const { user, loading, subscription } = useAuth()
+  const { user, loading, subscription, error } = useAuth()
   const [apiKey, setApiKey] = useState<string | null>(null)
 
   const handleApiKeySubmit = async (key: string) => {
@@ -117,10 +117,21 @@ export default function HomePage() {
     }
   }
 
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-red-500">
+          Error loading application: {error}
+        </div>
+      </div>
+    )
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+        <div className="ml-2">Loading...</div>
       </div>
     )
   }
