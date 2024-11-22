@@ -82,76 +82,75 @@ CREATE POLICY "Users can insert own settings."
 -- First, let's add logging capability
 CREATE EXTENSION IF NOT EXISTS "plpgsql_check";
 
--- Modify the handle_new_user function with better error handling and logging
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER AS $$
-BEGIN
-  -- Log the start of function execution
-  RAISE LOG 'handle_new_user() started for user ID: %', new.id;
-  
-  BEGIN
-    -- Insert into profiles
-    INSERT INTO public.profiles (
-      id,
-      full_name,
-      avatar_url,
-      updated_at
-    ) VALUES (
-      new.id,
-      COALESCE(new.raw_user_meta_data->>'full_name', new.email),
-      COALESCE(new.raw_user_meta_data->>'avatar_url', 'default_avatar_url'),
-      now()
-    );
-    
-    RAISE LOG 'Profile created for user ID: %', new.id;
-  EXCEPTION WHEN OTHERS THEN
-    RAISE LOG 'Error creating profile: %', SQLERRM;
-    RAISE;
-  END;
+-- First ensure we have the necessary permissions
+GRANT USAGE ON SCHEMA auth TO postgres, service_role;
+GRANT ALL ON ALL TABLES IN SCHEMA auth TO postgres, service_role;
 
-  BEGIN
-    -- Insert into user_settings
-    INSERT INTO public.user_settings (
-      user_id,
-      is_premium,
-      theme,
-      plan,
-      created_at,
-      updated_at
-    ) VALUES (
-      new.id,
-      false,
-      'light',
-      'free',
-      now(),
-      now()
-    );
-    
-    RAISE LOG 'User settings created for user ID: %', new.id;
-  EXCEPTION WHEN OTHERS THEN
-    RAISE LOG 'Error creating user settings: %', SQLERRM;
-    RAISE;
-  END;
+-- Enable the pgcrypto extension for UUID generation
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
-  RETURN new;
-EXCEPTION WHEN OTHERS THEN
-  RAISE LOG 'Fatal error in handle_new_user(): %', SQLERRM;
-  RETURN new; -- Still return new to allow the user creation even if our handling fails
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Drop existing trigger if it exists
+-- Drop existing function and trigger if they exist
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+DROP FUNCTION IF EXISTS public.handle_new_user();
 
--- Recreate the trigger
-CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW
-  EXECUTE FUNCTION public.handle_new_user();
+-- Create the trigger function in public schema
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER
+SECURITY DEFINER SET search_path = public
+AS $$
+DECLARE
+  profile_id UUID;
+BEGIN
+    -- Debug logging
+    RAISE LOG 'New user created: %', NEW.id;
+    
+    -- Create profile
+    INSERT INTO public.profiles (id, full_name, avatar_url, updated_at)
+    VALUES (
+        NEW.id,
+        COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email),
+        COALESCE(NEW.raw_user_meta_data->>'avatar_url', 'default_avatar_url'),
+        NOW()
+    )
+    RETURNING id INTO profile_id;
+    
+    RAISE LOG 'Profile created with ID: %', profile_id;
 
--- Ensure proper permissions
+    -- Create user settings
+    INSERT INTO public.user_settings (
+        user_id,
+        is_premium,
+        theme,
+        plan,
+        created_at,
+        updated_at
+    )
+    VALUES (
+        NEW.id,
+        false,
+        'light',
+        'free',
+        NOW(),
+        NOW()
+    );
+    
+    RAISE LOG 'User settings created for ID: %', NEW.id;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Grant necessary permissions
 GRANT USAGE ON SCHEMA public TO postgres, anon, authenticated, service_role;
 GRANT ALL ON ALL TABLES IN SCHEMA public TO postgres, anon, authenticated, service_role;
-GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO postgres, anon, authenticated, service_role;
-GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO postgres, anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.handle_new_user() TO postgres, anon, authenticated, service_role;
+
+-- Create the trigger
+CREATE TRIGGER on_auth_user_created
+AFTER INSERT ON auth.users
+FOR EACH ROW
+EXECUTE FUNCTION public.handle_new_user();
+
+-- Enable the trigger explicitly
+ALTER TABLE auth.users ENABLE TRIGGER on_auth_user_created;
 
