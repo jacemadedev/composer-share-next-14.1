@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Sidebar from '@/components/sidebar'
 import SearchBar from '@/components/search-bar'
 import SuggestedTopics from '@/components/suggested-topics'
@@ -25,8 +25,14 @@ export default function HomePage() {
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null)
   const [showAuthModal, setShowAuthModal] = useState(false)
-  const { user, loading, subscription, error } = useAuth()
+  const { user, loading, subscription, error, refreshSession } = useAuth()
   const [apiKey, setApiKey] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!user && !loading) {
+      refreshSession()
+    }
+  }, [user, loading, refreshSession])
 
   const handleApiKeySubmit = async (key: string) => {
     setApiKey(key)

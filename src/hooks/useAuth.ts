@@ -20,12 +20,9 @@ export function useAuth() {
   const [subscription, setSubscription] = useState<Subscription | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  // Add console logs for debugging
-  useEffect(() => {
-    console.log('Auth State:', { loading, user, subscription, error })
-  }, [loading, user, subscription, error])
-
   const fetchSubscription = async (userId: string, mounted: boolean) => {
+    if (!userId) return
+
     try {
       const { data: subscriptionData, error: subError } = await supabase
         .from('subscriptions')
@@ -33,23 +30,16 @@ export function useAuth() {
         .eq('user_id', userId)
         .single()
       
-      if (subError) {
-        console.log('Subscription fetch error:', subError)
-        // Don't treat missing subscription as an error
-        if (subError.code === 'PGRST116') {
-          if (mounted) setSubscription(null)
-          return
-        }
-        throw subError
+      if (subError && subError.code !== 'PGRST116') {
+        console.error('Subscription fetch error:', subError)
       }
       
       if (mounted) {
-        setSubscription(subscriptionData)
+        setSubscription(subscriptionData || null)
       }
     } catch (error) {
       console.error('Subscription fetch error:', error)
       if (mounted) {
-        setError(error instanceof Error ? error.message : 'Failed to fetch subscription')
         setSubscription(null)
       }
     }
@@ -57,29 +47,35 @@ export function useAuth() {
 
   useEffect(() => {
     let mounted = true
-    console.log('useAuth effect running')
+
+    // First, check for an existing session in localStorage
+    const existingSession = supabase.auth.session()
+    
+    if (existingSession?.user) {
+      setUser({
+        id: existingSession.user.id,
+        email: existingSession.user.email || '',
+      })
+      fetchSubscription(existingSession.user.id, mounted)
+    }
 
     async function getInitialSession() {
       try {
-        console.log('Fetching initial session...')
-        setLoading(true)
-        
         const {
           data: { session },
           error: sessionError,
         } = await supabase.auth.getSession()
 
-        if (sessionError) throw sessionError
-
-        console.log('Session retrieved:', session)
+        if (sessionError) {
+          throw sessionError
+        }
 
         if (mounted) {
           if (session?.user) {
-            const localUser: LocalUser = {
+            setUser({
               id: session.user.id,
               email: session.user.email || '',
-            }
-            setUser(localUser)
+            })
             await fetchSubscription(session.user.id, mounted)
           } else {
             setUser(null)
@@ -96,24 +92,23 @@ export function useAuth() {
       } finally {
         if (mounted) {
           setLoading(false)
-          console.log('Initial session load complete')
         }
       }
     }
 
     getInitialSession()
 
+    // Listen for auth changes
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.id)
+        console.log('Auth state changed:', event)
         
         if (mounted) {
           if (session?.user) {
-            const localUser: LocalUser = {
+            setUser({
               id: session.user.id,
               email: session.user.email || '',
-            }
-            setUser(localUser)
+            })
             await fetchSubscription(session.user.id, mounted)
           } else {
             setUser(null)
@@ -125,12 +120,37 @@ export function useAuth() {
     )
 
     return () => {
-      console.log('useAuth cleanup running')
       mounted = false
       authListener.subscription.unsubscribe()
     }
   }, [])
 
-  return { user, loading, subscription, error }
+  // Add a method to force refresh the session
+  const refreshSession = async () => {
+    try {
+      setLoading(true)
+      const { data: { session }, error } = await supabase.auth.refreshSession()
+      
+      if (error) throw error
+      
+      if (session?.user) {
+        setUser({
+          id: session.user.id,
+          email: session.user.email || '',
+        })
+        await fetchSubscription(session.user.id, true)
+      } else {
+        setUser(null)
+        setSubscription(null)
+      }
+    } catch (error) {
+      console.error('Session refresh error:', error)
+      setError(error instanceof Error ? error.message : 'Failed to refresh session')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return { user, loading, subscription, error, refreshSession }
 }
 
