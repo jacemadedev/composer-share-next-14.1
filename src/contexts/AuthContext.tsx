@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 
 interface AuthContextType {
@@ -30,7 +30,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null)
   const [isInitialized, setIsInitialized] = useState(false)
 
-  const resetAuth = async () => {
+  const resetAuth = useCallback(async () => {
     try {
       setIsLoading(true)
       // Clear all storage
@@ -42,20 +42,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/")
       })
       
-      await supabase.auth.signOut({ scope: 'global' })
+      await supabase.auth.signOut()
       setUser(null)
       setSubscription(null)
       setError(null)
-      window.location.reload()
+      
+      // Instead of reloading, just reset the state
+      setIsInitialized(false)
+      setIsLoading(false)
     } catch (error) {
       console.error('Error resetting auth:', error)
       setError('Failed to reset authentication')
-    } finally {
       setIsLoading(false)
     }
-  }
+  }, [])
 
-  const fetchSubscription = async (userId: string) => {
+  const fetchSubscription = useCallback(async (userId: string) => {
     try {
       const { data, error: subError } = await supabase
         .from('subscriptions')
@@ -71,41 +73,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error('Error fetching subscription:', err)
       setSubscription(null)
     }
-  }
+  }, [])
 
   useEffect(() => {
     let mounted = true
 
     async function initializeAuth() {
+      if (!mounted) return
+
       try {
         console.log('Initializing auth...')
+        
+        // First try to recover the session
         const { data: { session }, error: sessionError } = await supabase.auth.getSession()
         
-        if (sessionError) throw sessionError
-
-        if (mounted) {
-          if (session?.user) {
-            console.log('User found:', session.user.email)
-            setUser({
-              id: session.user.id,
-              email: session.user.email || '',
-            })
-            await fetchSubscription(session.user.id)
-          } else {
-            console.log('No user found')
-            setUser(null)
-            setSubscription(null)
-          }
+        if (sessionError) {
+          console.error('Session error:', sessionError)
+          throw sessionError
         }
+
+        if (!mounted) return
+
+        if (session?.user) {
+          console.log('User found:', session.user.email)
+          setUser({
+            id: session.user.id,
+            email: session.user.email || '',
+          })
+          await fetchSubscription(session.user.id)
+        } else {
+          console.log('No user found')
+          setUser(null)
+          setSubscription(null)
+        }
+        
+        setIsLoading(false)
+        setIsInitialized(true)
       } catch (err) {
         console.error('Auth initialization error:', err)
         if (mounted) {
-          setError('Failed to initialize authentication')
-        }
-      } finally {
-        if (mounted) {
-          setIsLoading(false)
-          setIsInitialized(true)
+          await resetAuth()
         }
       }
     }
@@ -116,41 +123,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.log('Auth initialization timeout')
         resetAuth()
       }
-    }, 10000)
+    }, 5000) // Reduced timeout to 5 seconds
 
-    initializeAuth()
-
+    // Setup auth state listener first
     const { data: { subscription: authListener } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state changed:', event)
         
-        if (mounted) {
-          if (session?.user) {
-            setUser({
-              id: session.user.id,
-              email: session.user.email || '',
-            })
-            await fetchSubscription(session.user.id)
-          } else {
-            setUser(null)
-            setSubscription(null)
-          }
-          setIsLoading(false)
+        if (!mounted) return
+
+        if (session?.user) {
+          setUser({
+            id: session.user.id,
+            email: session.user.email || '',
+          })
+          await fetchSubscription(session.user.id)
+        } else {
+          setUser(null)
+          setSubscription(null)
         }
+        setIsLoading(false)
       }
     )
+
+    // Then initialize auth
+    initializeAuth()
 
     return () => {
       mounted = false
       clearTimeout(timeoutId)
       authListener.unsubscribe()
     }
-  }, [isInitialized])
+  }, [isInitialized, fetchSubscription, resetAuth])
 
-  const refreshSubscription = async () => {
+  const refreshSubscription = useCallback(async () => {
     if (!user) return Promise.resolve()
     return fetchSubscription(user.id)
-  }
+  }, [user, fetchSubscription])
+
+  // Add debug information to help diagnose issues
+  console.log('Auth state:', {
+    isLoading,
+    isInitialized,
+    hasUser: !!user,
+    hasSubscription: !!subscription,
+    hasError: !!error
+  })
 
   return (
     <AuthContext.Provider 
