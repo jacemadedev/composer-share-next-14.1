@@ -11,6 +11,6 @@ A Next.js application that helps developers manage their repositories and collab
 - 💳 Stripe integration for subscription management
 - 🔐 Supabase authentication and database
 
-## Getting Started
+## Getting Startedd
 
 First, set up your environment variables in `.env.local`:
