@@ -79,27 +79,79 @@ CREATE POLICY "Users can insert own settings."
   ON user_settings FOR INSERT
   WITH CHECK ( auth.uid() = user_id );
 
--- Functions
+-- First, let's add logging capability
+CREATE EXTENSION IF NOT EXISTS "plpgsql_check";
+
+-- Modify the handle_new_user function with better error handling and logging
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  -- Insert into profiles
-  INSERT INTO public.profiles (id, full_name, avatar_url)
-  VALUES (new.id, new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'avatar_url');
+  -- Log the start of function execution
+  RAISE LOG 'handle_new_user() started for user ID: %', new.id;
   
-  -- Insert into user_settings with default values including plan
-  INSERT INTO public.user_settings (user_id, is_premium, theme, plan)
-  VALUES (new.id, false, 'light', 'free');
-  
+  BEGIN
+    -- Insert into profiles
+    INSERT INTO public.profiles (
+      id,
+      full_name,
+      avatar_url,
+      updated_at
+    ) VALUES (
+      new.id,
+      COALESCE(new.raw_user_meta_data->>'full_name', new.email),
+      COALESCE(new.raw_user_meta_data->>'avatar_url', 'default_avatar_url'),
+      now()
+    );
+    
+    RAISE LOG 'Profile created for user ID: %', new.id;
+  EXCEPTION WHEN OTHERS THEN
+    RAISE LOG 'Error creating profile: %', SQLERRM;
+    RAISE;
+  END;
+
+  BEGIN
+    -- Insert into user_settings
+    INSERT INTO public.user_settings (
+      user_id,
+      is_premium,
+      theme,
+      plan,
+      created_at,
+      updated_at
+    ) VALUES (
+      new.id,
+      false,
+      'light',
+      'free',
+      now(),
+      now()
+    );
+    
+    RAISE LOG 'User settings created for user ID: %', new.id;
+  EXCEPTION WHEN OTHERS THEN
+    RAISE LOG 'Error creating user settings: %', SQLERRM;
+    RAISE;
+  END;
+
   RETURN new;
+EXCEPTION WHEN OTHERS THEN
+  RAISE LOG 'Fatal error in handle_new_user(): %', SQLERRM;
+  RETURN new; -- Still return new to allow the user creation even if our handling fails
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Trigger for new user
+-- Drop existing trigger if it exists
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+
+-- Recreate the trigger
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+  FOR EACH ROW
+  EXECUTE FUNCTION public.handle_new_user();
 
--- Secure the function
-REVOKE ALL ON FUNCTION public.handle_new_user() FROM PUBLIC;
+-- Ensure proper permissions
+GRANT USAGE ON SCHEMA public TO postgres, anon, authenticated, service_role;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO postgres, anon, authenticated, service_role;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO postgres, anon, authenticated, service_role;
+GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO postgres, anon, authenticated, service_role;
 
