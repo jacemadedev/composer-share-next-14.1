@@ -31,6 +31,7 @@ export default function HomePage() {
   const { user, subscription, isLoading, error, refreshSubscription } = useAuth()
   const [apiKey, setApiKey] = useState<string | null>(null)
   const searchParams = useSearchParams()
+  const [plan, setPlan] = useState<string | null>(null)
 
   // Handle Stripe checkout return
   useEffect(() => {
@@ -157,7 +158,8 @@ export default function HomePage() {
         isAuthenticated={!!user}
         onSignInClick={() => setShowAuthModal(true)}
         user={user}
-        isPremium={subscription?.status === 'active'}
+        isPremium={plan === 'premium'}
+        plan={plan}
       />
       <main className="flex-1 ml-64 p-8">{renderPage()}</main>
       <AuthModal

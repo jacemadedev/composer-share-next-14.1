@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Home, BookOpen, Users, Clock, Settings, LogOut, CreditCard, ChevronRight, User, Menu } from 'lucide-react'
+import { Home, BookOpen, Users, Clock, Settings, LogOut, CreditCard, ChevronRight, User, Menu, Crown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
@@ -10,10 +10,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { cn } from '@/lib/utils' // Updated import path
+import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 import { UpgradePlanModal } from './upgrade-plan-modal'
-import { UpgradePrompt } from './upgrade-prompt' // Assuming UpgradePrompt is a new component
+import { UpgradePrompt } from './upgrade-prompt'
+import { Badge } from '@/components/ui/badge'
 
 type NavItem = {
   icon: React.ElementType;
@@ -40,15 +41,23 @@ interface SidebarProps {
     };
   } | null;
   isPremium: boolean;
+  plan: string | null;
 }
 
-export default function Sidebar({ setCurrentPage, isAuthenticated, onSignInClick, user, isPremium }: SidebarProps) {
+export default function Sidebar({ 
+  setCurrentPage, 
+  isAuthenticated, 
+  onSignInClick, 
+  user, 
+  isPremium,
+  plan 
+}: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [activeItem, setActiveItem] = useState('home')
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false)
-  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false) // New state for upgrade prompt
+  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false)
 
-  const handleNavClick = (page: string, isPremiumPage: boolean) => { // Updated function
+  const handleNavClick = (page: string, isPremiumPage: boolean) => {
     if (isPremiumPage && !isPremium) {
       setShowUpgradePrompt(true)
     } else {
@@ -59,6 +68,28 @@ export default function Sidebar({ setCurrentPage, isAuthenticated, onSignInClick
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
+  }
+
+  const getPlanBadge = () => {
+    if (!isAuthenticated) return null
+    
+    switch (plan) {
+      case 'premium':
+        return (
+          <Badge variant="premium" className="ml-auto">
+            <Crown className="w-3 h-3 mr-1" />
+            Premium
+          </Badge>
+        )
+      case 'free':
+        return (
+          <Badge variant="secondary" className="ml-auto">
+            Free Plan
+          </Badge>
+        )
+      default:
+        return null
+    }
   }
 
   return (
@@ -100,6 +131,12 @@ export default function Sidebar({ setCurrentPage, isAuthenticated, onSignInClick
           </Button>
         </div>
 
+        {!isCollapsed && isAuthenticated && (
+          <div className="px-4 py-2 border-b border-gray-200">
+            {getPlanBadge()}
+          </div>
+        )}
+
         <nav className="flex-grow py-6">
           <ul className="space-y-2 px-2">
             {navItems.map((item) => (
@@ -111,7 +148,7 @@ export default function Sidebar({ setCurrentPage, isAuthenticated, onSignInClick
                     activeItem === item.page && "bg-blue-50 text-blue-700",
                     isCollapsed ? "justify-center" : "justify-start px-4"
                   )}
-                  onClick={() => handleNavClick(item.page, item.isPremium)} // Updated onClick
+                  onClick={() => handleNavClick(item.page, item.isPremium)}
                 >
                   <item.icon className="h-5 w-5" />
                   {!isCollapsed && <span className="ml-3">{item.label}</span>}
@@ -188,7 +225,7 @@ export default function Sidebar({ setCurrentPage, isAuthenticated, onSignInClick
           userId={user?.id || ''}
         />
       )}
-      {showUpgradePrompt && ( // Added UpgradePrompt component
+      {showUpgradePrompt && (
         <UpgradePrompt
           isOpen={showUpgradePrompt}
           onClose={() => setShowUpgradePrompt(false)}
