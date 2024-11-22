@@ -26,7 +26,7 @@ export default function HomePage() {
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null)
   const [showAuthModal, setShowAuthModal] = useState(false)
-  const { user, loading, subscription, error } = useAuth()
+  const { user, loading, subscription, error, refreshSubscription } = useAuth()
   const [apiKey, setApiKey] = useState<string | null>(null)
   const searchParams = useSearchParams()
 
@@ -36,19 +36,35 @@ export default function HomePage() {
     if (sessionId) {
       const verifySession = async () => {
         try {
-          const response = await fetch(`/api/verify-session?session_id=${sessionId}`)
+          // Add cache-busting query parameter
+          const timestamp = new Date().getTime()
+          const response = await fetch(
+            `/api/verify-session?session_id=${sessionId}&_=${timestamp}`,
+            {
+              headers: {
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache',
+                'Expires': '0'
+              }
+            }
+          )
+          
           if (!response.ok) {
             throw new Error('Failed to verify session')
           }
-          // Clear the URL parameters after successful verification
-          window.history.replaceState({}, '', window.location.pathname)
+          
+          // Force a hard refresh of the subscription data
+          await refreshSubscription()
+          
+          // Clear the URL parameters and force a page refresh
+          window.location.href = window.location.pathname
         } catch (err) {
           console.error('Error verifying session:', err)
         }
       }
       verifySession()
     }
-  }, [searchParams])
+  }, [searchParams, refreshSubscription])
 
   const handleApiKeySubmit = async (key: string) => {
     setApiKey(key)

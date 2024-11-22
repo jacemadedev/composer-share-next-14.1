@@ -24,15 +24,13 @@ export function useAuth() {
     if (!userId) return
 
     try {
-      const { data: subscriptionData, error: subError } = await supabase
+      // Add cache-busting query parameter
+      const { data: subscriptionData } = await supabase
         .from('subscriptions')
         .select('*')
         .eq('user_id', userId)
         .single()
-      
-      if (subError && subError.code !== 'PGRST116') {
-        console.error('Subscription fetch error:', subError)
-      }
+        .throwOnError()
       
       if (mounted) {
         setSubscription(subscriptionData || null)
@@ -47,12 +45,13 @@ export function useAuth() {
 
   useEffect(() => {
     let mounted = true
+    let timeoutId: NodeJS.Timeout
 
     async function getInitialSession() {
       try {
-        setLoading(true)
-        // Get current session using the new API
-        const { data: { session } } = await supabase.auth.getSession()
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+
+        if (sessionError) throw sessionError
 
         if (mounted) {
           if (session?.user) {
@@ -65,6 +64,12 @@ export function useAuth() {
             setUser(null)
             setSubscription(null)
           }
+          // Add a small delay before setting loading to false
+          timeoutId = setTimeout(() => {
+            if (mounted) {
+              setLoading(false)
+            }
+          }, 500)
         }
       } catch (error) {
         console.error('Session fetch error:', error)
@@ -72,9 +77,6 @@ export function useAuth() {
           setError(error instanceof Error ? error.message : 'Failed to get session')
           setUser(null)
           setSubscription(null)
-        }
-      } finally {
-        if (mounted) {
           setLoading(false)
         }
       }
@@ -104,10 +106,18 @@ export function useAuth() {
 
     return () => {
       mounted = false
+      if (timeoutId) clearTimeout(timeoutId)
       authListener.subscription.unsubscribe()
     }
   }, [])
 
-  return { user, loading, subscription, error }
+  // Add a method to manually refresh subscription
+  const refreshSubscription = async () => {
+    if (user) {
+      await fetchSubscription(user.id, true)
+    }
+  }
+
+  return { user, loading, subscription, error, refreshSubscription }
 }
 

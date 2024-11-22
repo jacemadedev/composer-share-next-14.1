@@ -7,11 +7,20 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 })
 
 export async function GET(req: Request) {
+  const headers = {
+    'Cache-Control': 'no-store, no-cache, must-revalidate',
+    'Pragma': 'no-cache',
+    'Expires': '0',
+  }
+
   const { searchParams } = new URL(req.url)
   const sessionId = searchParams.get('session_id')
 
   if (!sessionId) {
-    return NextResponse.json({ error: 'Missing session_id' }, { status: 400 })
+    return NextResponse.json({ error: 'Missing session_id' }, { 
+      status: 400,
+      headers 
+    })
   }
 
   try {
@@ -22,7 +31,6 @@ export async function GET(req: Request) {
       const subscription = await stripe.subscriptions.retrieve(session.subscription as string)
 
       if (userId) {
-        // Update subscription status in Supabase with all required fields
         const { error } = await supabase
           .from('subscriptions')
           .upsert({ 
@@ -43,17 +51,26 @@ export async function GET(req: Request) {
 
         if (error) {
           console.error('Error updating subscription status:', error)
-          return NextResponse.json({ error: 'Failed to update subscription status' }, { status: 500 })
+          return NextResponse.json({ error: 'Failed to update subscription status' }, { 
+            status: 500,
+            headers 
+          })
         }
       }
 
-      return NextResponse.json({ success: true })
+      return NextResponse.json({ success: true }, { headers })
     } else {
-      return NextResponse.json({ error: 'Payment not completed' }, { status: 400 })
+      return NextResponse.json({ error: 'Payment not completed' }, { 
+        status: 400,
+        headers 
+      })
     }
   } catch (error) {
     console.error('Error verifying session:', error)
-    return NextResponse.json({ error: 'Failed to verify session' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to verify session' }, { 
+      status: 500,
+      headers 
+    })
   }
 }
 
