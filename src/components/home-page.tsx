@@ -26,9 +26,19 @@ export default function HomePage() {
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null)
   const [showAuthModal, setShowAuthModal] = useState(false)
-  const { user, loading, subscription, error, refreshSubscription } = useAuth()
+  const { user, loading, subscription, error, resetAuth, refreshSubscription } = useAuth()
   const [apiKey, setApiKey] = useState<string | null>(null)
   const searchParams = useSearchParams()
+
+  // Add effect to handle stuck sessions
+  useEffect(() => {
+    if (loading && !user) {
+      const timeout = setTimeout(() => {
+        resetAuth()
+      }, 5000) // Reset auth if loading takes too long
+      return () => clearTimeout(timeout)
+    }
+  }, [loading, user, resetAuth])
 
   // Handle Stripe checkout return
   useEffect(() => {
@@ -36,35 +46,21 @@ export default function HomePage() {
     if (sessionId) {
       const verifySession = async () => {
         try {
-          // Add cache-busting query parameter
-          const timestamp = new Date().getTime()
-          const response = await fetch(
-            `/api/verify-session?session_id=${sessionId}&_=${timestamp}`,
-            {
-              headers: {
-                'Cache-Control': 'no-cache, no-store, must-revalidate',
-                'Pragma': 'no-cache',
-                'Expires': '0'
-              }
-            }
-          )
-          
+          const response = await fetch(`/api/verify-session?session_id=${sessionId}`)
           if (!response.ok) {
             throw new Error('Failed to verify session')
           }
-          
-          // Force a hard refresh of the subscription data
           await refreshSubscription()
-          
-          // Clear the URL parameters and force a page refresh
-          window.location.href = window.location.pathname
+          // Use replace instead of href to avoid page reload
+          window.history.replaceState({}, '', window.location.pathname)
         } catch (err) {
           console.error('Error verifying session:', err)
+          await resetAuth() // Reset auth on error
         }
       }
       verifySession()
     }
-  }, [searchParams, refreshSubscription])
+  }, [searchParams, refreshSubscription, resetAuth])
 
   const handleApiKeySubmit = async (key: string) => {
     setApiKey(key)
@@ -167,9 +163,15 @@ export default function HomePage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-        <div className="ml-2">Loading...</div>
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mb-4"></div>
+        <div className="mb-4">Loading...</div>
+        <button 
+          onClick={resetAuth}
+          className="text-sm text-blue-500 hover:text-blue-700"
+        >
+          Click here if loading takes too long
+        </button>
       </div>
     )
   }

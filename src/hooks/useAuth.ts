@@ -22,15 +22,12 @@ export function useAuth() {
 
   const fetchSubscription = async (userId: string, mounted: boolean) => {
     if (!userId) return
-
     try {
-      // Add cache-busting query parameter
       const { data: subscriptionData } = await supabase
         .from('subscriptions')
         .select('*')
         .eq('user_id', userId)
         .single()
-        .throwOnError()
       
       if (mounted) {
         setSubscription(subscriptionData || null)
@@ -43,15 +40,37 @@ export function useAuth() {
     }
   }
 
+  const resetAuth = async () => {
+    try {
+      await supabase.auth.signOut()
+      setUser(null)
+      setSubscription(null)
+      setError(null)
+      // Clear any stored session data
+      localStorage.removeItem('supabase.auth.token')
+    } catch (error) {
+      console.error('Error resetting auth:', error)
+    }
+  }
+
   useEffect(() => {
     let mounted = true
-    let timeoutId: NodeJS.Timeout
 
     async function getInitialSession() {
       try {
+        // First try to clear any existing session that might be stuck
+        const existingSession = await supabase.auth.getSession()
+        if (existingSession.error) {
+          await resetAuth()
+        }
+
         const { data: { session }, error: sessionError } = await supabase.auth.getSession()
 
-        if (sessionError) throw sessionError
+        if (sessionError) {
+          console.error('Session error:', sessionError)
+          await resetAuth()
+          throw sessionError
+        }
 
         if (mounted) {
           if (session?.user) {
@@ -64,19 +83,12 @@ export function useAuth() {
             setUser(null)
             setSubscription(null)
           }
-          // Add a small delay before setting loading to false
-          timeoutId = setTimeout(() => {
-            if (mounted) {
-              setLoading(false)
-            }
-          }, 500)
+          setLoading(false)
         }
       } catch (error) {
         console.error('Session fetch error:', error)
         if (mounted) {
-          setError(error instanceof Error ? error.message : 'Failed to get session')
-          setUser(null)
-          setSubscription(null)
+          await resetAuth()
           setLoading(false)
         }
       }
@@ -106,18 +118,17 @@ export function useAuth() {
 
     return () => {
       mounted = false
-      if (timeoutId) clearTimeout(timeoutId)
       authListener.subscription.unsubscribe()
     }
   }, [])
 
-  // Add a method to manually refresh subscription
-  const refreshSubscription = async () => {
-    if (user) {
-      await fetchSubscription(user.id, true)
-    }
+  return { 
+    user, 
+    loading, 
+    subscription, 
+    error,
+    resetAuth, // Export the reset function
+    refreshSubscription: () => user && fetchSubscription(user.id, true)
   }
-
-  return { user, loading, subscription, error, refreshSubscription }
 }
 
