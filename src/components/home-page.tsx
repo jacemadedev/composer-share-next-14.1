@@ -11,9 +11,6 @@ import ChatInterface from '@/components/chat-interface'
 import { AuthModal } from '@/components/auth-modal'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
-import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 
 type Conversation = {
   id: string;

@@ -33,8 +33,13 @@ interface SidebarProps {
   setCurrentPage: (page: string) => void;
   isAuthenticated: boolean;
   onSignInClick: () => void;
-  user: any | null;
-  isPremium: boolean; // Add this line
+  user: {
+    id: string;
+    user_metadata?: {
+      name?: string;
+    };
+  } | null;
+  isPremium: boolean;
 }
 
 export default function Sidebar({ setCurrentPage, isAuthenticated, onSignInClick, user, isPremium }: SidebarProps) {
