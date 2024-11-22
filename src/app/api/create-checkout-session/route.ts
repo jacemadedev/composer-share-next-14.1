@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
+import { supabase } from '@/lib/supabase'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -10,18 +11,27 @@ export async function POST(req: Request) {
   try {
     const { priceId, userId } = await req.json()
 
-    // Get user's auth details
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.admin.getUserById(userId)
-    
-    if (authError || !user) {
-      console.error('Error fetching auth user:', authError)
-      throw new Error('Failed to fetch auth user')
+    let userEmail: string | null = null
+
+    // Try to get user email through admin client first
+    if (supabaseAdmin) {
+      const { data: { user }, error: authError } = await supabaseAdmin.auth.admin.getUserById(userId)
+      if (!authError && user?.email) {
+        userEmail = user.email
+      }
     }
 
-    const session = await stripe.checkout.sessions.create({
+    // Fallback: try to get user through auth API
+    if (!userEmail) {
+      const { data: { session }, error: authError } = await supabase.auth.getSession()
+      if (!authError && session?.user?.email) {
+        userEmail = session.user.email
+      }
+    }
+
+    const sessionConfig: Stripe.Checkout.SessionCreateParams = {
       mode: 'subscription',
       payment_method_types: ['card'],
-      customer_email: user.email, // Pre-fill customer email
       line_items: [
         {
           price: priceId,
@@ -34,7 +44,14 @@ export async function POST(req: Request) {
       metadata: {
         userId: userId,
       },
-    })
+    }
+
+    // Only add customer_email if we have it
+    if (userEmail) {
+      sessionConfig.customer_email = userEmail
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionConfig)
 
     return NextResponse.json({ sessionId: session.id })
   } catch (error) {
