@@ -66,6 +66,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const refreshSubscription = async () => {
+    if (!user) return Promise.resolve()
+    return fetchSubscription(user.id)
+  }
+
   useEffect(() => {
     let mounted = true
 
@@ -126,7 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading,
         error,
         resetAuth,
-        refreshSubscription: () => user && fetchSubscription(user.id),
+        refreshSubscription,
       }}
     >
       {children}
