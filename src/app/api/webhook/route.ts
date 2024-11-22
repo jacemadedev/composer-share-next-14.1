@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
+import { headers } from 'next/headers'
 import { supabase } from '@/lib/supabase'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -9,56 +10,98 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
 
 export async function POST(req: Request) {
-  const body = await req.text()
-  const sig = req.headers.get('stripe-signature') as string
-
-  let event: Stripe.Event
-
   try {
-    event = stripe.webhooks.constructEvent(body, sig, webhookSecret)
-  } catch (err) {
-    return NextResponse.json({ error: `Webhook Error: ${err instanceof Error ? err.message : 'Unknown Error'}` }, { status: 400 })
+    const body = await req.text()
+    const headersList = headers()
+    const signature = headersList.get('stripe-signature')
+
+    if (!signature) {
+      return NextResponse.json(
+        { error: 'Missing stripe-signature header' },
+        { status: 400 }
+      )
+    }
+
+    let event: Stripe.Event
+
+    try {
+      event = stripe.webhooks.constructEvent(body, signature, webhookSecret)
+    } catch (err) {
+      console.error('Webhook signature verification failed:', err)
+      return NextResponse.json(
+        { error: `Webhook Error: ${err instanceof Error ? err.message : 'Unknown Error'}` },
+        { status: 400 }
+      )
+    }
+
+    // Handle the event
+    switch (event.type) {
+      case 'checkout.session.completed':
+        const checkoutSession = event.data.object as Stripe.Checkout.Session
+        if (checkoutSession.client_reference_id) {
+          await handleSuccessfulSubscription(checkoutSession)
+        }
+        break
+
+      case 'customer.subscription.updated':
+        const updatedSubscription = event.data.object as Stripe.Subscription
+        await handleSubscriptionUpdate(updatedSubscription)
+        break
+
+      case 'customer.subscription.deleted':
+        const deletedSubscription = event.data.object as Stripe.Subscription
+        await handleSubscriptionCancellation(deletedSubscription)
+        break
+
+      case 'invoice.payment_succeeded':
+        const successfulInvoice = event.data.object as Stripe.Invoice
+        if (successfulInvoice.subscription) {
+          const subscription = await stripe.subscriptions.retrieve(successfulInvoice.subscription as string)
+          await handleSubscriptionUpdate(subscription)
+        }
+        break
+
+      case 'invoice.payment_failed':
+        const failedInvoice = event.data.object as Stripe.Invoice
+        if (failedInvoice.subscription) {
+          const subscription = await stripe.subscriptions.retrieve(failedInvoice.subscription as string)
+          await handleSubscriptionUpdate(subscription)
+        }
+        break
+
+      default:
+        console.log(`Unhandled event type: ${event.type}`)
+    }
+
+    return NextResponse.json({ received: true })
+  } catch (error) {
+    console.error('Webhook error:', error)
+    return NextResponse.json(
+      { error: 'Webhook handler failed' },
+      { status: 500 }
+    )
   }
+}
 
-  // Handle the event
-  switch (event.type) {
-    case 'checkout.session.completed':
-      const checkoutSession = event.data.object as Stripe.Checkout.Session
-      if (checkoutSession.client_reference_id) {
-        await handleSuccessfulSubscription(checkoutSession)
-      }
-      break
+export async function GET() {
+  return NextResponse.json(
+    { error: 'Method not allowed' },
+    { status: 405 }
+  )
+}
 
-    case 'customer.subscription.updated':
-      const updatedSubscription = event.data.object as Stripe.Subscription
-      await handleSubscriptionUpdate(updatedSubscription)
-      break
+export async function PUT() {
+  return NextResponse.json(
+    { error: 'Method not allowed' },
+    { status: 405 }
+  )
+}
 
-    case 'customer.subscription.deleted':
-      const deletedSubscription = event.data.object as Stripe.Subscription
-      await handleSubscriptionCancellation(deletedSubscription)
-      break
-
-    case 'invoice.payment_succeeded':
-      const invoice = event.data.object as Stripe.Invoice
-      await handleSuccessfulPayment(invoice)
-      break
-
-    case 'invoice.payment_failed':
-      const failedInvoice = event.data.object as Stripe.Invoice
-      await handleFailedPayment(failedInvoice)
-      break
-
-    case 'customer.subscription.trial_will_end':
-      const trialEndingSubscription = event.data.object as Stripe.Subscription
-      await handleTrialEnding(trialEndingSubscription)
-      break
-
-    default:
-      console.log(`Unhandled event type ${event.type}`)
-  }
-
-  return NextResponse.json({ received: true })
+export async function DELETE() {
+  return NextResponse.json(
+    { error: 'Method not allowed' },
+    { status: 405 }
+  )
 }
 
 async function handleSuccessfulSubscription(session: Stripe.Checkout.Session) {
@@ -155,24 +198,5 @@ async function handleSubscriptionCancellation(subscription: Stripe.Subscription)
     console.error('Error updating user settings:', settingsError)
     throw new Error('Failed to update user settings')
   }
-}
-
-async function handleSuccessfulPayment(invoice: Stripe.Invoice) {
-  if (invoice.subscription) {
-    const subscription = await stripe.subscriptions.retrieve(invoice.subscription as string)
-    await handleSubscriptionUpdate(subscription)
-  }
-}
-
-async function handleFailedPayment(invoice: Stripe.Invoice) {
-  if (invoice.subscription) {
-    const subscription = await stripe.subscriptions.retrieve(invoice.subscription as string)
-    await handleSubscriptionUpdate(subscription)
-  }
-}
-
-async function handleTrialEnding(subscription: Stripe.Subscription) {
-  // You might want to notify the user that their trial is ending soon
-  console.log(`Trial ending soon for subscription ${subscription.id}`)
 }
 
