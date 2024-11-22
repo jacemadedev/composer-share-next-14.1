@@ -9,6 +9,18 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
 
+// Add OPTIONS method handler for CORS preflight
+export async function OPTIONS() {
+  return NextResponse.json({}, {
+    headers: {
+      'Allow': 'POST, OPTIONS',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, stripe-signature',
+    },
+  })
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.text()
@@ -33,6 +45,15 @@ export async function POST(req: Request) {
         { status: 400 }
       )
     }
+
+    // Add CORS headers to the response
+    const response = NextResponse.json({ received: true }, {
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, stripe-signature',
+      },
+    })
 
     // Handle the event
     switch (event.type) {
@@ -73,34 +94,66 @@ export async function POST(req: Request) {
         console.log(`Unhandled event type: ${event.type}`)
     }
 
-    return NextResponse.json({ received: true })
+    return response
   } catch (error) {
     console.error('Webhook error:', error)
     return NextResponse.json(
       { error: 'Webhook handler failed' },
-      { status: 500 }
+      { 
+        status: 500,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, stripe-signature',
+        },
+      }
     )
   }
 }
 
+// Update other method handlers to include CORS headers
 export async function GET() {
   return NextResponse.json(
     { error: 'Method not allowed' },
-    { status: 405 }
+    { 
+      status: 405,
+      headers: {
+        'Allow': 'POST, OPTIONS',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, stripe-signature',
+      },
+    }
   )
 }
 
 export async function PUT() {
   return NextResponse.json(
     { error: 'Method not allowed' },
-    { status: 405 }
+    { 
+      status: 405,
+      headers: {
+        'Allow': 'POST, OPTIONS',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, stripe-signature',
+      },
+    }
   )
 }
 
 export async function DELETE() {
   return NextResponse.json(
     { error: 'Method not allowed' },
-    { status: 405 }
+    { 
+      status: 405,
+      headers: {
+        'Allow': 'POST, OPTIONS',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, stripe-signature',
+      },
+    }
   )
 }
 
