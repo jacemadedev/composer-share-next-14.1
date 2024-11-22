@@ -31,6 +31,7 @@ export default function HomePage() {
   const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const { user, subscription, plan, isLoading, error, refreshSubscription } = useAuth()
+  const isAuthenticated = !!user
   const [apiKey, setApiKey] = useState<string | null>(null)
   const searchParams = useSearchParams()
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false)
@@ -187,7 +188,7 @@ export default function HomePage() {
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar
         setCurrentPage={setCurrentPage}
-        isAuthenticated={!!user}
+        isAuthenticated={isAuthenticated}
         onSignInClick={() => setShowAuthModal(true)}
         user={user}
         isPremium={subscription?.status === 'active' || plan === 'premium'}
@@ -202,7 +203,7 @@ export default function HomePage() {
         <UpgradePlanModal
           isOpen={isUpgradeModalOpen}
           onClose={() => setIsUpgradeModalOpen(false)}
-          isAuthenticated={!!user}
+          isAuthenticated={isAuthenticated}
           userId={user?.id || ''}
         />
       )}
