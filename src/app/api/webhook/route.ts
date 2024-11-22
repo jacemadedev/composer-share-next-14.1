@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { headers } from 'next/headers'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase-admin'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2024-11-20.acacia',
@@ -157,14 +157,18 @@ export async function DELETE() {
 }
 
 async function handleSuccessfulSubscription(session: Stripe.Checkout.Session) {
+  if (!supabaseAdmin) {
+    throw new Error('Supabase admin client not available')
+  }
+
   console.log('Handling successful subscription for session:', session.id)
   
   const subscription = await stripe.subscriptions.retrieve(session.subscription as string)
   console.log('Retrieved subscription:', subscription.id)
 
   try {
-    // First update subscription
-    const { error: subError } = await supabase
+    // First update subscription using admin client
+    const { error: subError } = await supabaseAdmin
       .from('subscriptions')
       .upsert({ 
         user_id: session.client_reference_id!, 
@@ -187,8 +191,8 @@ async function handleSuccessfulSubscription(session: Stripe.Checkout.Session) {
       throw new Error(`Failed to update subscription: ${subError.message}`)
     }
 
-    // Then update user settings
-    const { error: settingsError } = await supabase
+    // Then update user settings using admin client
+    const { error: settingsError } = await supabaseAdmin
       .from('user_settings')
       .update({ 
         plan: 'premium',
@@ -210,7 +214,11 @@ async function handleSuccessfulSubscription(session: Stripe.Checkout.Session) {
 }
 
 async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
-  const { error } = await supabase
+  if (!supabaseAdmin) {
+    throw new Error('Supabase admin client not available')
+  }
+
+  const { error } = await supabaseAdmin
     .from('subscriptions')
     .upsert({ 
       user_id: subscription.customer as string,
@@ -235,7 +243,11 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
 }
 
 async function handleSubscriptionCancellation(subscription: Stripe.Subscription) {
-  const { error } = await supabase
+  if (!supabaseAdmin) {
+    throw new Error('Supabase admin client not available')
+  }
+
+  const { error } = await supabaseAdmin
     .from('subscriptions')
     .update({ 
       status: subscription.status,
@@ -250,7 +262,7 @@ async function handleSubscriptionCancellation(subscription: Stripe.Subscription)
     throw new Error('Failed to update subscription status')
   }
 
-  const { error: settingsError } = await supabase
+  const { error: settingsError } = await supabaseAdmin
     .from('user_settings')
     .update({ 
       plan: 'free',
