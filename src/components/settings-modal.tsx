@@ -13,18 +13,14 @@ import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
+import { Database } from '@/types/supabase'
 
 interface SettingsModalProps {
   isOpen: boolean
   onClose: () => void
 }
 
-interface UserSettings {
-  theme: string;
-  is_premium: boolean;
-  plan: string;
-  openai_api_key: string | null;
-}
+type UserSettings = Database['public']['Tables']['user_settings']['Row']
 
 export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const { user } = useAuth()
@@ -37,13 +33,12 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       const fetchSettings = async () => {
         const { data, error } = await supabase
           .from('user_settings')
-          .select('theme, is_premium, plan, openai_api_key')
+          .select('*')
           .eq('user_id', user.id)
           .single()
 
         if (!error && data) {
-          const settings = data as UserSettings
-          setTheme(settings.theme || 'light')
+          setTheme(data.theme || 'light')
         }
       }
 
