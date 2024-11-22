@@ -19,6 +19,13 @@ interface SettingsModalProps {
   onClose: () => void
 }
 
+interface UserSettings {
+  theme: string;
+  is_premium: boolean;
+  plan: string;
+  openai_api_key: string | null;
+}
+
 export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const { user } = useAuth()
   const [theme, setTheme] = useState('light')
@@ -30,12 +37,13 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       const fetchSettings = async () => {
         const { data, error } = await supabase
           .from('user_settings')
-          .select('theme')
+          .select('theme, is_premium, plan, openai_api_key')
           .eq('user_id', user.id)
           .single()
 
         if (!error && data) {
-          setTheme(data.theme)
+          const settings = data as UserSettings
+          setTheme(settings.theme || 'light')
         }
       }
 
@@ -45,6 +53,12 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    if (!user?.id) {
+      console.error('No user ID found')
+      return
+    }
+
     setIsLoading(true)
 
     try {
@@ -54,7 +68,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           theme,
           updated_at: new Date().toISOString()
         })
-        .eq('user_id', user?.id)
+        .eq('user_id', user.id)
 
       if (error) throw error
 
@@ -64,6 +78,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  if (!user) {
+    return null
   }
 
   return (
