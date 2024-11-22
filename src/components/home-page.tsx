@@ -14,6 +14,8 @@ import { useSearchParams } from 'next/navigation'
 import LoadingScreen from '@/components/loading-screen'
 import ErrorScreen from '@/components/error-screen'
 import { supabase } from '@/lib/supabase'
+import { Button } from '@/components/ui/button'
+import { UpgradePlanModal } from '@/components/upgrade-plan-modal'
 
 type Conversation = {
   id: string;
@@ -31,6 +33,7 @@ export default function HomePage() {
   const { user, subscription, plan, isLoading, error, refreshSubscription } = useAuth()
   const [apiKey, setApiKey] = useState<string | null>(null)
   const searchParams = useSearchParams()
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false)
 
   // Handle Stripe checkout return
   useEffect(() => {
@@ -90,17 +93,47 @@ export default function HomePage() {
   }
 
   const renderPage = () => {
+    const isPremiumUser = subscription?.status === 'active' || plan === 'premium'
+
     switch (currentPage) {
       case 'repos':
-        return <ReposPage />
+        return isPremiumUser ? (
+          <ReposPage />
+        ) : (
+          <div className="flex flex-col items-center justify-center min-h-[calc(100vh-4rem)]">
+            <h2 className="text-2xl font-bold mb-4">Premium Feature</h2>
+            <p className="mb-4">This feature is only available to premium users.</p>
+            <Button onClick={() => setIsUpgradeModalOpen(true)}>
+              Upgrade to Premium
+            </Button>
+          </div>
+        )
       case 'collaborators':
-        return <CollaboratorsPage />
+        return isPremiumUser ? (
+          <CollaboratorsPage />
+        ) : (
+          <div className="flex flex-col items-center justify-center min-h-[calc(100vh-4rem)]">
+            <h2 className="text-2xl font-bold mb-4">Premium Feature</h2>
+            <p className="mb-4">This feature is only available to premium users.</p>
+            <Button onClick={() => setIsUpgradeModalOpen(true)}>
+              Upgrade to Premium
+            </Button>
+          </div>
+        )
       case 'history':
-        return (
+        return isPremiumUser ? (
           <HistoryPage
             conversations={conversations}
             setCurrentConversation={setCurrentConversation}
           />
+        ) : (
+          <div className="flex flex-col items-center justify-center min-h-[calc(100vh-4rem)]">
+            <h2 className="text-2xl font-bold mb-4">Premium Feature</h2>
+            <p className="mb-4">This feature is only available to premium users.</p>
+            <Button onClick={() => setIsUpgradeModalOpen(true)}>
+              Upgrade to Premium
+            </Button>
+          </div>
         )
       default:
         return (
@@ -165,6 +198,14 @@ export default function HomePage() {
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
       />
+      {isAuthenticated && (
+        <UpgradePlanModal
+          isOpen={isUpgradeModalOpen}
+          onClose={() => setIsUpgradeModalOpen(false)}
+          isAuthenticated={!!user}
+          userId={user?.id || ''}
+        />
+      )}
     </div>
   )
 }

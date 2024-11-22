@@ -92,6 +92,8 @@ export default function Sidebar({
     }
   }
 
+  const showUpgradeButton = isAuthenticated && plan !== 'premium'
+
   return (
     <aside className={cn(
       "bg-white border-r border-gray-200 transition-all duration-300 ease-in-out fixed h-full",
@@ -162,7 +164,7 @@ export default function Sidebar({
         </nav>
 
         <div className="p-4 border-t border-gray-200">
-          {!isCollapsed && isAuthenticated && (
+          {!isCollapsed && showUpgradeButton && (
             <Button 
               variant="outline" 
               className="w-full justify-start text-gray-700 mb-4"
@@ -195,10 +197,12 @@ export default function Sidebar({
                   <User className="mr-2 h-4 w-4" />
                   <span>Profile</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <CreditCard className="mr-2 h-4 w-4" />
-                  <span>Billing</span>
-                </DropdownMenuItem>
+                {plan === 'premium' && (
+                  <DropdownMenuItem>
+                    <CreditCard className="mr-2 h-4 w-4" />
+                    <span>Billing</span>
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem>
                   <Settings className="mr-2 h-4 w-4" />
                   <span>Settings</span>
@@ -217,7 +221,7 @@ export default function Sidebar({
           )}
         </div>
       </div>
-      {isAuthenticated && (
+      {isAuthenticated && !isPremium && (
         <UpgradePlanModal 
           isOpen={isUpgradeModalOpen} 
           onClose={() => setIsUpgradeModalOpen(false)} 
