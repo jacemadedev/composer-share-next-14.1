@@ -16,6 +16,10 @@ interface AuthContextType {
 interface LocalUser {
   id: string
   email: string
+  user_metadata?: {
+    name?: string
+    avatar_url?: string
+  }
 }
 
 interface Subscription {
@@ -144,6 +148,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser({
             id: session.user.id,
             email: session.user.email || '',
+            user_metadata: session.user.user_metadata
           })
           fetchUserData(session.user.id)
         } else {
@@ -182,6 +187,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser({
             id: session.user.id,
             email: session.user.email || '',
+            user_metadata: session.user.user_metadata
           })
           fetchUserData(session.user.id)
         } else {
