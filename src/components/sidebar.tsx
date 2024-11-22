@@ -19,7 +19,7 @@ type NavItem = {
   icon: React.ElementType;
   label: string;
   page: string;
-  isPremium?: boolean; // Add isPremium property
+  isPremium: boolean;
 }
 
 const navItems: NavItem[] = [
