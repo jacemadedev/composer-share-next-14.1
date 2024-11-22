@@ -9,9 +9,11 @@ import CollaboratorsPage from '@/components/collaborators-page'
 import HistoryPage from '@/components/history-page'
 import ChatInterface from '@/components/chat-interface'
 import { AuthModal } from '@/components/auth-modal'
-import { useAuth } from '@/hooks/useAuth'
-import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/contexts/AuthContext'
 import { useSearchParams } from 'next/navigation'
+import LoadingScreen from '@/components/loading-screen'
+import ErrorScreen from '@/components/error-screen'
+import { supabase } from '@/lib/supabase'
 
 type Conversation = {
   id: string;
@@ -26,19 +28,9 @@ export default function HomePage() {
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null)
   const [showAuthModal, setShowAuthModal] = useState(false)
-  const { user, loading, subscription, error, resetAuth, refreshSubscription } = useAuth()
+  const { user, subscription, isLoading, error, refreshSubscription } = useAuth()
   const [apiKey, setApiKey] = useState<string | null>(null)
   const searchParams = useSearchParams()
-
-  // Add effect to handle stuck sessions
-  useEffect(() => {
-    if (loading && !user) {
-      const timeout = setTimeout(() => {
-        resetAuth()
-      }, 5000) // Reset auth if loading takes too long
-      return () => clearTimeout(timeout)
-    }
-  }, [loading, user, resetAuth])
 
   // Handle Stripe checkout return
   useEffect(() => {
@@ -55,12 +47,11 @@ export default function HomePage() {
           window.history.replaceState({}, '', window.location.pathname)
         } catch (err) {
           console.error('Error verifying session:', err)
-          await resetAuth() // Reset auth on error
         }
       }
       verifySession()
     }
-  }, [searchParams, refreshSubscription, resetAuth])
+  }, [searchParams, refreshSubscription])
 
   const handleApiKeySubmit = async (key: string) => {
     setApiKey(key)
@@ -152,28 +143,11 @@ export default function HomePage() {
   }
 
   if (error) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-red-500">
-          Error loading application: {error}
-        </div>
-      </div>
-    )
+    return <ErrorScreen message={error} />
   }
 
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mb-4"></div>
-        <div className="mb-4">Loading...</div>
-        <button 
-          onClick={resetAuth}
-          className="text-sm text-blue-500 hover:text-blue-700"
-        >
-          Click here if loading takes too long
-        </button>
-      </div>
-    )
+  if (isLoading) {
+    return <LoadingScreen />
   }
 
   return (
