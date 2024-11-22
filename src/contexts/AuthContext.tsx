@@ -62,32 +62,56 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchUserData = useCallback(async (userId: string) => {
     try {
-      // Fetch subscription
-      const { data: subscriptionData, error: subscriptionError } = await supabase
-        .from('subscriptions')
-        .select('status')
-        .eq('user_id', userId)
-        .maybeSingle();
-
-      if (subscriptionError) {
-        console.error('Subscription fetch error:', subscriptionError);
-        setSubscription(null);
-      } else {
-        setSubscription(subscriptionData);
-      }
-
-      // Fetch user settings
+      // First fetch user settings since this is more reliable
       const { data: settingsData, error: settingsError } = await supabase
         .from('user_settings')
         .select('plan, is_premium')
         .eq('user_id', userId)
-        .maybeSingle();
+        .single();
 
       if (settingsError) {
         console.error('Settings fetch error:', settingsError);
         setPlan('free');
       } else {
         setPlan(settingsData?.plan || 'free');
+      }
+
+      // Then fetch subscription data
+      const { data: subscriptionData, error: subscriptionError } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('status', 'active')
+        .single();
+
+      if (subscriptionError) {
+        if (subscriptionError.code === 'PGRST116') {
+          // No subscription found - this is normal for free users
+          setSubscription(null);
+        } else {
+          console.error('Subscription fetch error:', subscriptionError);
+          setSubscription(null);
+        }
+      } else {
+        setSubscription(subscriptionData);
+        
+        // If we have an active subscription but plan isn't premium, update it
+        if (subscriptionData?.status === 'active' && settingsData?.plan !== 'premium') {
+          const { error: updateError } = await supabase
+            .from('user_settings')
+            .update({ 
+              plan: 'premium',
+              is_premium: true,
+              updated_at: new Date().toISOString()
+            })
+            .eq('user_id', userId);
+
+          if (updateError) {
+            console.error('Error updating user settings to premium:', updateError);
+          } else {
+            setPlan('premium');
+          }
+        }
       }
     } catch (err) {
       console.error('Error fetching user data:', err);
