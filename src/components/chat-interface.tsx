@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
@@ -28,34 +28,7 @@ export default function ChatInterface({ initialMessage, conversation, onUpdateCo
   const [input, setInput] = useState('')
   const [isKeyValid, setIsKeyValid] = useState(false)
 
-  useEffect(() => {
-    if (initialMessage && conversation.messages.length === 0) {
-      handleSend(initialMessage)
-    }
-  }, [initialMessage, conversation])
-
-  useEffect(() => {
-    if (apiKey) {
-      validateApiKey(apiKey)
-    }
-  }, [apiKey])
-
-  const validateApiKey = async (key: string) => {
-    try {
-      const response = await fetch('https://api.openai.com/v1/engines', {
-        headers: {
-          'Authorization': `Bearer ${key}`,
-          'Content-Type': 'application/json',
-        },
-      })
-      setIsKeyValid(response.ok)
-    } catch (error) {
-      console.error('Error validating API key:', error)
-      setIsKeyValid(false)
-    }
-  }
-
-  const handleSend = async (message: string = input) => {
+  const handleSend = useCallback(async (message: string = input) => {
     if (message.trim() && apiKey) {
       const newMessage: Message = { content: message, sender: 'user' }
       const updatedMessages = [...conversation.messages, newMessage]
@@ -98,6 +71,33 @@ export default function ChatInterface({ initialMessage, conversation, onUpdateCo
       }
 
       setInput('')
+    }
+  }, [input, apiKey, conversation, onUpdateConversation])
+
+  useEffect(() => {
+    if (initialMessage && conversation.messages.length === 0) {
+      handleSend(initialMessage)
+    }
+  }, [initialMessage, conversation.messages.length, handleSend])
+
+  useEffect(() => {
+    if (apiKey) {
+      validateApiKey(apiKey)
+    }
+  }, [apiKey])
+
+  const validateApiKey = async (key: string) => {
+    try {
+      const response = await fetch('https://api.openai.com/v1/engines', {
+        headers: {
+          'Authorization': `Bearer ${key}`,
+          'Content-Type': 'application/json',
+        },
+      })
+      setIsKeyValid(response.ok)
+    } catch (error) {
+      console.error('Error validating API key:', error)
+      setIsKeyValid(false)
     }
   }
 

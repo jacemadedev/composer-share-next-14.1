@@ -1,11 +1,23 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
-import { User } from '@supabase/supabase-js'
+
+// Define our local User type
+interface LocalUser {
+  id: string;
+  email: string;
+  // ... other properties
+}
+
+// Define subscription type
+interface Subscription {
+  status: string;
+  // ... other subscription properties
+}
 
 export function useAuth() {
-  const [user, setUser] = useState<User | null>(null)
+  const [user, setUser] = useState<LocalUser | null>(null)
   const [loading, setLoading] = useState(true)
-  const [subscription, setSubscription] = useState<any>(null)
+  const [subscription, setSubscription] = useState<Subscription | null>(null)
 
   useEffect(() => {
     let mounted = true
@@ -17,16 +29,20 @@ export function useAuth() {
           data: { session },
         } = await supabase.auth.getSession()
 
-        if (mounted) {
-          if (session) {
-            setUser(session.user)
-            const { data: subscriptionData } = await supabase
-              .from('subscriptions')
-              .select('*')
-              .eq('user_id', session.user.id)
-              .single()
-            setSubscription(subscriptionData)
+        if (mounted && session?.user) {
+          const localUser: LocalUser = {
+            id: session.user.id,
+            email: session.user.email || '',
+            // ... map other properties
           }
+          setUser(localUser)
+          
+          const { data: subscriptionData } = await supabase
+            .from('subscriptions')
+            .select('*')
+            .eq('user_id', session.user.id)
+            .single()
+          setSubscription(subscriptionData)
         }
       } catch (error) {
         console.error('Error getting session:', error)
@@ -42,7 +58,13 @@ export function useAuth() {
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (session?.user) {
-          setUser(session.user)
+          const localUser: LocalUser = {
+            id: session.user.id,
+            email: session.user.email || '',
+            // ... map other properties
+          }
+          setUser(localUser)
+          
           const { data: subscriptionData } = await supabase
             .from('subscriptions')
             .select('*')

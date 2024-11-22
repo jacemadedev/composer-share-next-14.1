@@ -23,32 +23,7 @@ type StarterKit = {
 }
 
 export default function ReposPage() {
-  const [starterKits, setStarterKits] = useState<StarterKit[]>([
-    {
-      name: 'Next.js Boilerplate',
-      description: 'A feature-rich starter for Next.js projects with TypeScript, ESLint, and Tailwind CSS.',
-      stars: 1500,
-      forks: 300,
-      tags: ['Next.js', 'TypeScript', 'Tailwind'],
-      previewUrl: 'https://nextjs-boilerplate.vercel.app',
-    },
-    {
-      name: 'React Native Starter',
-      description: 'Jump-start your mobile app development with this React Native template.',
-      stars: 2800,
-      forks: 450,
-      tags: ['React Native', 'Expo', 'TypeScript'],
-      previewUrl: 'https://expo.dev/@example/react-native-starter',
-    },
-    {
-      name: 'Express API Boilerplate',
-      description: 'A robust starting point for building RESTful APIs with Express and MongoDB.',
-      stars: 3200,
-      forks: 600,
-      tags: ['Express', 'MongoDB', 'REST API'],
-      previewUrl: 'https://github.com/example/express-api-boilerplate',
-    },
-  ])
+  const [starterKits] = useState<StarterKit[]>([])
 
   const handleFork = (kitName: string) => {
     console.log(`Forking ${kitName}`)

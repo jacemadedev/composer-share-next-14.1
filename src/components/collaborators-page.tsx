@@ -16,13 +16,7 @@ type Member = {
 }
 
 export default function CollaboratorsPage() {
-  const [members, setMembers] = useState<Member[]>([
-    { id: 1, name: "Alice Johnson", username: "alice_dev", avatarUrl: "https://github.com/shadcn.png", repoCount: 45, coFounderWanted: true },
-    { id: 2, name: "Bob Smith", username: "bob_coder", avatarUrl: "https://github.com/shadcn.png", repoCount: 32, coFounderWanted: false },
-    { id: 3, name: "Charlie Brown", username: "charlie_programmer", avatarUrl: "https://github.com/shadcn.png", repoCount: 78, coFounderWanted: true },
-    { id: 4, name: "Diana Ross", username: "diana_techie", avatarUrl: "https://github.com/shadcn.png", repoCount: 56, coFounderWanted: false },
-    { id: 5, name: "Ethan Hunt", username: "ethan_mission", avatarUrl: "https://github.com/shadcn.png", repoCount: 23, coFounderWanted: true },
-  ])
+  const [members] = useState<Member[]>([]);
 
   const [searchQuery, setSearchQuery] = useState('')
 
