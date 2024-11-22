@@ -198,22 +198,22 @@ export default function Sidebar({
                 <DropdownMenuContent className="w-56" align="end" forceMount>
                   <DropdownMenuLabel>My Account</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => setShowProfileModal(true)}>
+                  <DropdownMenuItem onSelect={() => setShowProfileModal(true)}>
                     <User className="mr-2 h-4 w-4" />
                     <span>Profile</span>
                   </DropdownMenuItem>
                   {plan === 'premium' && (
-                    <DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => window.open('https://billing.stripe.com', '_blank')}>
                       <CreditCard className="mr-2 h-4 w-4" />
                       <span>Billing</span>
                     </DropdownMenuItem>
                   )}
-                  <DropdownMenuItem onClick={() => setShowSettingsModal(true)}>
+                  <DropdownMenuItem onSelect={() => setShowSettingsModal(true)}>
                     <Settings className="mr-2 h-4 w-4" />
                     <span>Settings</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleSignOut}>
+                  <DropdownMenuItem onSelect={handleSignOut}>
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Log out</span>
                   </DropdownMenuItem>
