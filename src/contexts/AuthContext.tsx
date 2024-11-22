@@ -182,13 +182,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user, fetchUserData])
 
   // Add debug information to help diagnose issues
-  console.log('Auth state:', {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const debugLog = (message: string, data?: any) => {
+    if (process.env.NODE_ENV === 'development') {
+      console.debug(`[Auth] ${message}`, data || '');
+    }
+  };
+
+  debugLog('Auth state changed', {
     isLoading,
     isInitialized,
     hasUser: !!user,
     hasSubscription: !!subscription,
-    hasError: !!error
-  })
+    plan
+  });
 
   return (
     <AuthContext.Provider 
