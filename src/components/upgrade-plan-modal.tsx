@@ -11,6 +11,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { Check } from 'lucide-react'
 import { loadStripe } from '@stripe/stripe-js'
+import { useAuth } from '@/contexts/AuthContext'
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
@@ -24,6 +25,7 @@ interface UpgradePlanModalProps {
 export function UpgradePlanModal({ isOpen, onClose, isAuthenticated, userId }: UpgradePlanModalProps) {
   const [selectedPlan, setSelectedPlan] = useState<"monthly" | "yearly">("monthly")
   const [isLoading, setIsLoading] = useState(false)
+  const { user } = useAuth()
 
   const handleUpgrade = async () => {
     setIsLoading(true)
