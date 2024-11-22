@@ -15,4 +15,4 @@ A Next.js application that helps developers manage their repositories and collab
 
 First, set up your environment variables in `.env.local`:
 
-we are so back, why no work?
+we are so back, why no work?...
