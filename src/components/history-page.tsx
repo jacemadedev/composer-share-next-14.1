@@ -11,7 +11,7 @@ type Conversation = {
 }
 
 export default function HistoryPage() {
-  const [conversations, setConversations] = useState<Conversation[]>([
+  const [conversations] = useState<Conversation[]>([
     { id: '1', title: 'Repo Structure Analysis', lastMessage: 'Here\'s the analysis of your repo structure...', timestamp: '2 hours ago' },
     { id: '2', title: 'PR Review', lastMessage: 'I\'ve reviewed your latest PR. Here are my comments...', timestamp: '1 day ago' },
     { id: '3', title: 'Code Search', lastMessage: 'I found 3 instances of the code you\'re looking for...', timestamp: '3 days ago' },
