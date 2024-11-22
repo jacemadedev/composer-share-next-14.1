@@ -46,67 +46,66 @@ export async function POST(req: Request) {
       )
     }
 
-    // Add CORS headers to the response
-    const response = NextResponse.json({ received: true }, {
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, stripe-signature',
-      },
-    })
-
-    // Handle the event
-    switch (event.type) {
-      case 'checkout.session.completed':
-        const checkoutSession = event.data.object as Stripe.Checkout.Session
-        if (checkoutSession.client_reference_id) {
+    try {
+      // Handle the event
+      switch (event.type) {
+        case 'checkout.session.completed': {
+          const checkoutSession = event.data.object as Stripe.Checkout.Session
+          console.log('Processing checkout.session.completed:', checkoutSession.id)
+          
+          if (!checkoutSession.client_reference_id) {
+            throw new Error('No client_reference_id found in checkout session')
+          }
+          
+          if (!checkoutSession.subscription) {
+            throw new Error('No subscription found in checkout session')
+          }
+          
           await handleSuccessfulSubscription(checkoutSession)
+          break
         }
-        break
 
-      case 'customer.subscription.updated':
-        const updatedSubscription = event.data.object as Stripe.Subscription
-        await handleSubscriptionUpdate(updatedSubscription)
-        break
-
-      case 'customer.subscription.deleted':
-        const deletedSubscription = event.data.object as Stripe.Subscription
-        await handleSubscriptionCancellation(deletedSubscription)
-        break
-
-      case 'invoice.payment_succeeded':
-        const successfulInvoice = event.data.object as Stripe.Invoice
-        if (successfulInvoice.subscription) {
-          const subscription = await stripe.subscriptions.retrieve(successfulInvoice.subscription as string)
+        case 'customer.subscription.updated': {
+          const subscription = event.data.object as Stripe.Subscription
+          console.log('Processing subscription update:', subscription.id)
+          
+          if (!subscription.customer) {
+            throw new Error('No customer found in subscription')
+          }
+          
           await handleSubscriptionUpdate(subscription)
+          break
         }
-        break
 
-      case 'invoice.payment_failed':
-        const failedInvoice = event.data.object as Stripe.Invoice
-        if (failedInvoice.subscription) {
-          const subscription = await stripe.subscriptions.retrieve(failedInvoice.subscription as string)
-          await handleSubscriptionUpdate(subscription)
+        case 'customer.subscription.deleted': {
+          const subscription = event.data.object as Stripe.Subscription
+          console.log('Processing subscription deletion:', subscription.id)
+          
+          if (!subscription.customer) {
+            throw new Error('No customer found in subscription')
+          }
+          
+          await handleSubscriptionCancellation(subscription)
+          break
         }
-        break
 
-      default:
-        console.log(`Unhandled event type: ${event.type}`)
+        default:
+          console.log(`Unhandled event type: ${event.type}`)
+      }
+
+      return NextResponse.json({ received: true })
+    } catch (error) {
+      console.error('Error processing webhook:', error)
+      return NextResponse.json(
+        { error: error instanceof Error ? error.message : 'Unknown error in webhook handler' },
+        { status: 500 }
+      )
     }
-
-    return response
   } catch (error) {
     console.error('Webhook error:', error)
     return NextResponse.json(
       { error: 'Webhook handler failed' },
-      { 
-        status: 500,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, stripe-signature',
-        },
-      }
+      { status: 500 }
     )
   }
 }
@@ -158,42 +157,55 @@ export async function DELETE() {
 }
 
 async function handleSuccessfulSubscription(session: Stripe.Checkout.Session) {
+  console.log('Handling successful subscription for session:', session.id)
+  
   const subscription = await stripe.subscriptions.retrieve(session.subscription as string)
-  const { error } = await supabase
-    .from('subscriptions')
-    .upsert({ 
-      user_id: session.client_reference_id!, 
-      status: subscription.status,
-      price_id: subscription.items.data[0].price.id,
-      quantity: subscription.items.data[0].quantity,
-      cancel_at_period_end: subscription.cancel_at_period_end,
-      current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-      current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
-      created_at: new Date(subscription.created * 1000).toISOString(),
-      ended_at: subscription.ended_at ? new Date(subscription.ended_at * 1000).toISOString() : null,
-      cancel_at: subscription.cancel_at ? new Date(subscription.cancel_at * 1000).toISOString() : null,
-      canceled_at: subscription.canceled_at ? new Date(subscription.canceled_at * 1000).toISOString() : null,
-      trial_start: subscription.trial_start ? new Date(subscription.trial_start * 1000).toISOString() : null,
-      trial_end: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null
-    })
+  console.log('Retrieved subscription:', subscription.id)
 
-  if (error) {
-    console.error('Error updating user subscription status:', error)
-    throw new Error('Failed to update subscription status')
-  }
+  try {
+    // First update subscription
+    const { error: subError } = await supabase
+      .from('subscriptions')
+      .upsert({ 
+        user_id: session.client_reference_id!, 
+        status: subscription.status,
+        price_id: subscription.items.data[0].price.id,
+        quantity: subscription.items.data[0].quantity,
+        cancel_at_period_end: subscription.cancel_at_period_end,
+        current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
+        current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+        created_at: new Date(subscription.created * 1000).toISOString(),
+        ended_at: subscription.ended_at ? new Date(subscription.ended_at * 1000).toISOString() : null,
+        cancel_at: subscription.cancel_at ? new Date(subscription.cancel_at * 1000).toISOString() : null,
+        canceled_at: subscription.canceled_at ? new Date(subscription.canceled_at * 1000).toISOString() : null,
+        trial_start: subscription.trial_start ? new Date(subscription.trial_start * 1000).toISOString() : null,
+        trial_end: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null
+      })
 
-  const { error: settingsError } = await supabase
-    .from('user_settings')
-    .update({ 
-      plan: 'premium',
-      is_premium: true,
-      updated_at: new Date().toISOString()
-    })
-    .eq('user_id', session.client_reference_id!)
+    if (subError) {
+      console.error('Error updating subscription:', subError)
+      throw new Error(`Failed to update subscription: ${subError.message}`)
+    }
 
-  if (settingsError) {
-    console.error('Error updating user settings:', settingsError)
-    throw new Error('Failed to update user settings')
+    // Then update user settings
+    const { error: settingsError } = await supabase
+      .from('user_settings')
+      .update({ 
+        plan: 'premium',
+        is_premium: true,
+        updated_at: new Date().toISOString()
+      })
+      .eq('user_id', session.client_reference_id!)
+
+    if (settingsError) {
+      console.error('Error updating user settings:', settingsError)
+      throw new Error(`Failed to update user settings: ${settingsError.message}`)
+    }
+
+    console.log('Successfully processed subscription for user:', session.client_reference_id)
+  } catch (error) {
+    console.error('Error in handleSuccessfulSubscription:', error)
+    throw error
   }
 }
 
