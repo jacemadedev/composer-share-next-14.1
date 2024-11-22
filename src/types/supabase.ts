@@ -31,6 +31,7 @@ export interface Database {
         Row: {
           id: string;
           user_id: string;
+          customer_id: string | null;
           status: string;
           price_id: string;
           quantity: number;
@@ -47,6 +48,7 @@ export interface Database {
         Insert: {
           id?: string;
           user_id: string;
+          customer_id?: string | null;
           status: string;
           price_id: string;
           quantity?: number;
@@ -63,6 +65,7 @@ export interface Database {
         Update: {
           id?: string;
           user_id?: string;
+          customer_id?: string | null;
           status?: string;
           price_id?: string;
           quantity?: number;

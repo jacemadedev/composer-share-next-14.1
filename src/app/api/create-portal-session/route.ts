@@ -14,19 +14,18 @@ export async function POST(req: Request) {
       throw new Error('Supabase admin client not available')
     }
 
-    // Get customer ID from subscriptions table
+    // Get subscription and customer data
     const { data: subscription, error: subError } = await supabaseAdmin
       .from('subscriptions')
       .select('*')
       .eq('user_id', userId)
       .single()
 
-    if (subError) {
+    if (subError && subError.code !== 'PGRST116') {
       console.error('Error fetching subscription:', subError)
-      throw new Error('No subscription found')
+      throw new Error('Error fetching subscription')
     }
 
-    // Create Stripe customer if not exists
     let customerId = subscription?.customer_id
 
     if (!customerId) {
@@ -45,6 +44,18 @@ export async function POST(req: Request) {
         }
       })
       customerId = customer.id
+
+      // Save customer ID if we have a subscription
+      if (subscription) {
+        const { error: updateError } = await supabaseAdmin
+          .from('subscriptions')
+          .update({ customer_id: customerId })
+          .eq('user_id', userId)
+
+        if (updateError) {
+          console.error('Error updating customer ID:', updateError)
+        }
+      }
     }
 
     // Create portal session

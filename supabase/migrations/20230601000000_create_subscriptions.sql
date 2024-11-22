@@ -13,6 +13,7 @@ CREATE TABLE profiles (
 CREATE TABLE subscriptions (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   user_id UUID REFERENCES auth.users NOT NULL,
+  customer_id TEXT,
   status TEXT NOT NULL,
   price_id TEXT,
   quantity INTEGER,

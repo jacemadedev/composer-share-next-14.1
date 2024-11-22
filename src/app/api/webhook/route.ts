@@ -167,11 +167,17 @@ async function handleSuccessfulSubscription(session: Stripe.Checkout.Session) {
   console.log('Retrieved subscription:', subscription.id)
 
   try {
+    // Get the customer ID as string
+    const customerId = typeof session.customer === 'string' 
+      ? session.customer 
+      : session.customer?.id || null
+
     // First update subscription using admin client
     const { error: subError } = await supabaseAdmin
       .from('subscriptions')
       .upsert({ 
         user_id: session.client_reference_id!, 
+        customer_id: customerId, // Use the properly typed customer ID
         status: subscription.status,
         price_id: subscription.items.data[0].price.id,
         quantity: subscription.items.data[0].quantity,
