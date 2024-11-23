@@ -29,6 +29,12 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     storage: typeof window !== 'undefined' ? window.localStorage : undefined,
     storageKey: 'supabase.auth.token',
     flowType: 'pkce'
+  },
+  global: {
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json'
+    }
   }
 })
 

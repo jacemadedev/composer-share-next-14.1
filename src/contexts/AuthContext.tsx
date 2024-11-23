@@ -209,10 +209,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [isInitialized, fetchUserData, resetAuth])
 
-  const refreshSubscription = useCallback(async () => {
-    if (!user) return Promise.resolve()
-    return fetchUserData(user.id)
-  }, [user, fetchUserData])
+  const refreshSubscription = async (): Promise<void> => {
+    try {
+      const { data, error } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .single()
+      
+      if (error) {
+        console.error('Subscription fetch error:', error)
+        setSubscription(null)
+        return
+      }
+      
+      setSubscription(data)
+    } catch (err) {
+      console.error('Unexpected error:', err)
+      setSubscription(null)
+    }
+  }
 
   // Add debug information to help diagnose issues
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

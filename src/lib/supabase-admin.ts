@@ -10,6 +10,9 @@ export const supabaseAdmin = process.env.SUPABASE_SERVICE_ROLE_KEY
         auth: {
           autoRefreshToken: false,
           persistSession: false
+        },
+        db: {
+          schema: 'public'
         }
       }
     )
