@@ -24,13 +24,15 @@ interface ChatInterfaceProps {
   conversation: Conversation;
   onUpdateConversation: (updatedConversation: Conversation) => void;
   apiKey?: string | null;
+  conversationId?: string;
 }
 
 export default function ChatInterface({ 
   initialMessage, 
   conversation, 
   onUpdateConversation,
-  apiKey: externalApiKey
+  apiKey: externalApiKey,
+  conversationId
 }: ChatInterfaceProps) {
   const [input, setInput] = useState('')
   const [apiKey, setApiKey] = useState<string | null>(externalApiKey || null)
@@ -229,6 +231,37 @@ export default function ChatInterface({
 
     handleInitialMessage()
   }, [initialMessage, apiKey, conversation, onUpdateConversation, isProcessingInitial, user, saveChatToHistory])
+
+  useEffect(() => {
+    const loadExistingConversation = async () => {
+      if (!user || !conversationId) return
+
+      try {
+        const { data, error } = await supabase
+          .from('chat_history')
+          .select('*')
+          .eq('id', conversationId)
+          .single()
+
+        if (error) {
+          console.error('Error loading conversation:', error)
+          return
+        }
+
+        if (data) {
+          onUpdateConversation({
+            id: data.id,
+            title: data.title,
+            messages: data.messages
+          })
+        }
+      } catch (error) {
+        console.error('Error loading conversation:', error)
+      }
+    }
+
+    loadExistingConversation()
+  }, [user, conversationId, onUpdateConversation])
 
   if (apiKey === null) {
     return (

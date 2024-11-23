@@ -5,8 +5,9 @@ import { useRouter } from 'next/navigation'
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
-import { MessageSquare, Calendar } from 'lucide-react'
+import { MessageSquare, Calendar, MessageCircle } from 'lucide-react'
 import LoadingScreen from './loading-screen'
+import { Button } from '@/components/ui/button'
 
 interface ChatHistory {
   id: string
@@ -61,18 +62,34 @@ export default function HistoryPage() {
             <Card 
               key={chat.id}
               className="cursor-pointer hover:shadow-md transition-shadow"
-              onClick={() => router.push(`/chat?id=${chat.id}`)}
             >
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <MessageSquare className="h-5 w-5" />
                   {chat.title}
                 </CardTitle>
-                <CardDescription className="flex items-center gap-1">
-                  <Calendar className="h-4 w-4" />
-                  {new Date(chat.updated_at).toLocaleDateString()}
+                <CardDescription className="flex flex-col gap-2">
+                  <div className="flex items-center gap-1">
+                    <Calendar className="h-4 w-4" />
+                    {new Date(chat.updated_at).toLocaleDateString()}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <MessageCircle className="h-4 w-4" />
+                    {chat.messages.length} messages
+                  </div>
+                  <p className="text-sm text-gray-600 line-clamp-2">
+                    {chat.messages[chat.messages.length - 1]?.content}
+                  </p>
                 </CardDescription>
               </CardHeader>
+              <div className="p-4 pt-0">
+                <Button 
+                  className="w-full"
+                  onClick={() => router.push(`/chat?id=${chat.id}`)}
+                >
+                  Resume Chat
+                </Button>
+              </div>
             </Card>
           ))}
         </div>

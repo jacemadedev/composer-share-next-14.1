@@ -27,10 +27,11 @@ export default function ChatPageClient() {
   const router = useRouter()
   const { user } = useAuth()
   const initialQuery = searchParams?.get('q')
+  const conversationId = searchParams?.get('id')
   const [apiKey, setApiKey] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [conversation, setConversation] = useState<Conversation>({
-    id: generateUUID(),
+    id: conversationId || generateUUID(),
     title: initialQuery || 'New Chat',
     messages: initialQuery ? [{ content: initialQuery, sender: 'user' }] : []
   })
@@ -99,6 +100,7 @@ export default function ChatPageClient() {
           conversation={conversation}
           onUpdateConversation={setConversation}
           apiKey={apiKey}
+          conversationId={conversationId || undefined}
         />
       </div>
     </div>
