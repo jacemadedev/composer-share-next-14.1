@@ -68,6 +68,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchUserData = useCallback(async (userId: string) => {
     try {
+      // Get current session
+      const { data: { session } } = await supabaseAuth.auth.getSession()
+      if (!session) {
+        throw new Error('No active session')
+      }
+
       // Initialize user settings with default values
       await initializeOrUpdateUserSettings(userId)
 
@@ -87,24 +93,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setPlan('free')
       } else if (subscriptionData?.status === 'active') {
         setSubscription(subscriptionData)
-        // Only set as premium if not scheduled for cancellation
-        if (!subscriptionData.cancel_at_period_end) {
-          setPlan('premium')
-          await initializeOrUpdateUserSettings(userId, {
-            plan: 'premium',
-            is_premium: true
-          })
-        } else {
-          // Keep current plan until subscription actually ends
-          console.log('Subscription active but scheduled for cancellation')
-        }
+        setPlan('premium')
       } else {
         setSubscription(null)
         setPlan('free')
-        await initializeOrUpdateUserSettings(userId, {
-          plan: 'free',
-          is_premium: false
-        })
       }
     } catch (err) {
       console.error('Error in fetchUserData:', err)
@@ -236,40 +228,63 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!user) return
 
     try {
-      const { data, error } = await supabase
-        .from('subscriptions')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('status', 'active')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-      
-      if (error) {
-        console.error('Subscription fetch error:', error)
-        setSubscription(null)
-        return
-      }
-      
-      setSubscription(data)
-      if (data?.status === 'active') {
-        setPlan('premium')
+      // Add retry logic
+      const maxRetries = 3;
+      let retryCount = 0;
+      let success = false;
+
+      while (!success && retryCount < maxRetries) {
         try {
-          await supabase
-            .from('user_settings')
-            .update({ 
-              plan: 'premium',
-              is_premium: true,
-              updated_at: new Date().toISOString()
-            })
+          const { data, error } = await supabase
+            .from('subscriptions')
+            .select('*')
             .eq('user_id', user.id)
-        } catch (updateError) {
-          console.error('Error updating user settings:', updateError)
+            .eq('status', 'active')
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+          
+          if (error) {
+            throw error
+          }
+          
+          setSubscription(data)
+          if (data?.status === 'active') {
+            setPlan('premium')
+            try {
+              await supabase
+                .from('user_settings')
+                .update({ 
+                  plan: 'premium',
+                  is_premium: true,
+                  updated_at: new Date().toISOString()
+                })
+                .eq('user_id', user.id)
+            } catch (updateError) {
+              console.error('Error updating user settings:', updateError)
+            }
+          }
+          success = true
+        } catch (err) {
+          retryCount++
+          if (retryCount === maxRetries) {
+            throw err
+          }
+          // Exponential backoff
+          await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000))
         }
       }
     } catch (err) {
-      console.error('Unexpected error in refreshSubscription:', err)
+      console.error('Subscription fetch error:', {
+        message: err instanceof Error ? err.message : 'Unknown error',
+        details: err instanceof Error ? err.stack : '',
+        hint: 'Check network connection and Supabase service status',
+        code: ''
+      })
       setSubscription(null)
+      // Don't change plan if we can't verify subscription
+      // This prevents accidentally downgrading premium users
+      // setPlan('free')
     }
   }
 
