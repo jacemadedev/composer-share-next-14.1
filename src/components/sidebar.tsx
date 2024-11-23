@@ -11,7 +11,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { cn } from '@/lib/utils'
-import { supabaseAuth } from '@/lib/supabase'
 import { UpgradePlanModal } from './upgrade-plan-modal'
 import { UpgradePrompt } from './upgrade-prompt'
 import { Badge } from '@/components/ui/badge'

@@ -164,7 +164,7 @@ export default function HomePage() {
               <h1 className="text-4xl font-bold text-center text-gray-900">
                 GitAssist: Your Repo Assistant
               </h1>
-              <SearchBar onSearch={handleSearch} />
+              <SearchBar searchCallback={handleSearch} />
               <div>
                 <h2 className="text-2xl font-semibold mb-4">
                   Suggested Actions

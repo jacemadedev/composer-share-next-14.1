@@ -6,15 +6,17 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 
 interface SearchBarProps {
-  onSearch: (query: string) => void;
+  searchCallback?: (query: string) => void;
 }
 
-export default function SearchBar({ onSearch }: SearchBarProps) {
+export default function SearchBar({ searchCallback }: SearchBarProps) {
   const [searchQuery, setSearchQuery] = useState('')
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
-    onSearch(searchQuery)
+    if (searchCallback) {
+      searchCallback(searchQuery)
+    }
     setSearchQuery('')
   }
 
