@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { initializeOrUpdateUserSettings } from '@/lib/api-utils'
+import { generateUUID } from '@/lib/chat-utils'
 
 type Message = {
   content: string;
@@ -29,7 +30,7 @@ export default function ChatPageClient() {
   const [apiKey, setApiKey] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [conversation, setConversation] = useState<Conversation>({
-    id: Date.now().toString(),
+    id: generateUUID(),
     title: initialQuery || 'New Chat',
     messages: initialQuery ? [{ content: initialQuery, sender: 'user' }] : []
   })

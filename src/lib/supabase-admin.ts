@@ -37,9 +37,6 @@ export const supabaseAdmin = serviceRoleKey
 
             return response
           }
-        },
-        db: {
-          schema: 'public'
         }
       }
     )

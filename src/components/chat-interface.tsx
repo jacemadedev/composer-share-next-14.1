@@ -6,6 +6,7 @@ import { Send, Settings } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import { SettingsModal } from './settings-modal'
+import { generateUUID } from '@/lib/chat-utils'
 
 type Message = {
   content: string;
@@ -81,12 +82,57 @@ export default function ChatInterface({
     }
   }, [externalApiKey])
 
+  const saveChatToHistory = useCallback(async (updatedConversation: Conversation) => {
+    if (!user) return
+
+    try {
+      const chatId = updatedConversation.id.includes('-') 
+        ? updatedConversation.id 
+        : generateUUID()
+
+      const { data: existingChat, error: fetchError } = await supabase
+        .from('chat_history')
+        .select('id')
+        .eq('id', chatId)
+        .single()
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        console.error('Error checking chat history:', fetchError)
+        return
+      }
+
+      const timestamp = new Date().toISOString()
+      const chatData = {
+        id: chatId,
+        user_id: user.id,
+        title: updatedConversation.title,
+        messages: updatedConversation.messages,
+        updated_at: timestamp,
+        created_at: existingChat ? undefined : timestamp
+      }
+
+      const { error } = await supabase
+        .from('chat_history')
+        .upsert(chatData, {
+          onConflict: 'id',
+          ignoreDuplicates: false
+        })
+
+      if (error) {
+        console.error('Error saving chat history:', error)
+      }
+    } catch (error) {
+      console.error('Error in saveChatToHistory:', error)
+    }
+  }, [user])
+
   const handleSend = useCallback(async (message: string = input) => {
     if (!message.trim() || !apiKey) return
 
     const newMessage: Message = { content: message.trim(), sender: 'user' }
     const updatedMessages = [...conversation.messages, newMessage]
-    onUpdateConversation({ ...conversation, messages: updatedMessages })
+    const updatedConversation = { ...conversation, messages: updatedMessages }
+    onUpdateConversation(updatedConversation)
 
     try {
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -118,13 +164,16 @@ export default function ChatInterface({
       }
       
       const finalMessages = [...updatedMessages, aiResponse]
-      onUpdateConversation({ ...conversation, messages: finalMessages })
+      const finalConversation = { ...conversation, messages: finalMessages }
+      onUpdateConversation(finalConversation)
+      
+      await saveChatToHistory(finalConversation)
     } catch (error) {
       console.error('Error calling OpenAI API:', error)
     }
 
     setInput('')
-  }, [input, apiKey, conversation, onUpdateConversation])
+  }, [input, apiKey, conversation, onUpdateConversation, saveChatToHistory])
 
   useEffect(() => {
     const handleInitialMessage = async () => {
@@ -163,10 +212,13 @@ export default function ChatInterface({
             sender: 'assistant' as const
           }
 
-          onUpdateConversation({
+          const updatedConversation = {
             ...conversation,
             messages: [...conversation.messages, aiResponse]
-          })
+          }
+          onUpdateConversation(updatedConversation)
+          
+          await saveChatToHistory(updatedConversation)
         } catch (error) {
           console.error('Error processing initial message:', error)
         } finally {
@@ -176,7 +228,7 @@ export default function ChatInterface({
     }
 
     handleInitialMessage()
-  }, [initialMessage, apiKey, conversation, onUpdateConversation, isProcessingInitial])
+  }, [initialMessage, apiKey, conversation, onUpdateConversation, isProcessingInitial, user, saveChatToHistory])
 
   if (apiKey === null) {
     return (
