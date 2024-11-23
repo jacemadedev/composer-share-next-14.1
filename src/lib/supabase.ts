@@ -12,15 +12,26 @@ if (!supabaseAnonKey) {
   throw new Error('Missing env.NEXT_PUBLIC_SUPABASE_ANON_KEY')
 }
 
-// Validate URL format
 try {
   new URL(supabaseUrl)
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-} catch (error) {
+} catch {
   console.error('Invalid Supabase URL:', supabaseUrl)
   throw new Error('Invalid NEXT_PUBLIC_SUPABASE_URL format')
 }
 
+// Create a separate instance for auth operations
+export const supabaseAuth = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+    storageKey: 'supabase.auth.token',
+    flowType: 'pkce'
+  }
+})
+
+// Main client for data operations
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
@@ -31,9 +42,22 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     flowType: 'pkce'
   },
   global: {
-    headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json'
+    fetch: async (url, options = {}) => {
+      const { data: { session } } = await supabaseAuth.auth.getSession()
+      
+      const headers = new Headers(options.headers)
+      if (session?.access_token) {
+        headers.set('Authorization', `Bearer ${session.access_token}`)
+      }
+      headers.set('apikey', supabaseAnonKey)
+      headers.set('Accept', 'application/json')
+      headers.set('Content-Type', 'application/json')
+      headers.set('Prefer', 'return=representation')
+
+      return fetch(url, {
+        ...options,
+        headers
+      })
     }
   }
 })

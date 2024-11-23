@@ -16,6 +16,7 @@ import ErrorScreen from '@/components/error-screen'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { UpgradePlanModal } from '@/components/upgrade-plan-modal'
+import { cn } from '@/lib/utils'
 
 type Conversation = {
   id: string;
@@ -47,8 +48,8 @@ export default function HomePage() {
             throw new Error('Failed to verify session')
           }
           await refreshSubscription()
-          // Use replace instead of href to avoid page reload
-          window.history.replaceState({}, '', window.location.pathname)
+          // Use replace instead of push to avoid adding to history
+          window.history.replaceState({}, '', '/')
         } catch (err) {
           console.error('Error verifying session:', err)
         }
@@ -194,7 +195,14 @@ export default function HomePage() {
         isPremium={subscription?.status === 'active' || plan === 'premium'}
         plan={plan}
       />
-      <main className="flex-1 ml-64 p-8">{renderPage()}</main>
+      <main className={cn(
+        "flex-1 transition-all duration-300",
+        "p-4 md:p-8", // Smaller padding on mobile
+        "md:ml-64", // Only add margin on desktop
+        "w-full" // Full width on mobile
+      )}>
+        {renderPage()}
+      </main>
       <AuthModal
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}

@@ -114,19 +114,21 @@ export default function ChatInterface({ initialMessage, conversation, onUpdateCo
 
   return (
     <Card className="w-full">
-      <CardContent className="p-6">
-        <div className="space-y-4 mb-4 h-[400px] overflow-y-auto">
+      <CardContent className="p-3 md:p-6">
+        <div className="space-y-4 mb-4 h-[300px] md:h-[400px] overflow-y-auto">
           {conversation.messages.map((message, index) => (
             <div
               key={index}
               className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div
-                className={`max-w-[70%] p-3 rounded-lg ${
-                  message.sender === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-800'
+                className={`max-w-[85%] md:max-w-[70%] p-2 md:p-3 rounded-lg ${
+                  message.sender === 'user' 
+                    ? 'bg-blue-500 text-white' 
+                    : 'bg-gray-200 text-gray-800'
                 }`}
               >
-                {message.content}
+                <p className="text-sm md:text-base">{message.content}</p>
               </div>
             </div>
           ))}
@@ -136,10 +138,14 @@ export default function ChatInterface({ initialMessage, conversation, onUpdateCo
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Type your message..."
+            className="text-sm md:text-base"
             onKeyPress={(e) => e.key === 'Enter' && handleSend()}
           />
-          <Button onClick={() => handleSend()}>
-            <Send className="h-4 w-4" />
+          <Button 
+            onClick={() => handleSend()}
+            className="flex-shrink-0"
+          >
+            <Send className="h-4 w-4 md:h-5 md:w-5" />
           </Button>
         </div>
       </CardContent>
