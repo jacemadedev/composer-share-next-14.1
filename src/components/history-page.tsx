@@ -17,12 +17,7 @@ interface ChatHistory {
   updated_at: string
 }
 
-interface HistoryPageProps {
-  conversations?: Conversation[];
-  setCurrentConversation?: (conversation: Conversation | null) => void;
-}
-
-export default function HistoryPage({ conversations, setCurrentConversation }: HistoryPageProps = {}) {
+export default function HistoryPage() {
   const [chatHistory, setChatHistory] = useState<ChatHistory[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()

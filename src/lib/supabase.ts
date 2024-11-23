@@ -19,19 +19,7 @@ try {
   throw new Error('Invalid NEXT_PUBLIC_SUPABASE_URL format')
 }
 
-// Create a separate instance for auth operations
-export const supabaseAuth = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
-    storageKey: 'supabase.auth.token',
-    flowType: 'pkce'
-  }
-})
-
-// Main client for data operations
+// Create a single instance for both auth and data operations
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
@@ -40,25 +28,9 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     storage: typeof window !== 'undefined' ? window.localStorage : undefined,
     storageKey: 'supabase.auth.token',
     flowType: 'pkce'
-  },
-  global: {
-    fetch: async (url, options = {}) => {
-      const { data: { session } } = await supabaseAuth.auth.getSession()
-      
-      const headers = new Headers(options.headers)
-      if (session?.access_token) {
-        headers.set('Authorization', `Bearer ${session.access_token}`)
-      }
-      headers.set('apikey', supabaseAnonKey)
-      headers.set('Accept', 'application/json')
-      headers.set('Content-Type', 'application/json')
-      headers.set('Prefer', 'return=representation')
-
-      return fetch(url, {
-        ...options,
-        headers
-      })
-    }
   }
 })
+
+// Export the same instance for auth operations
+export const supabaseAuth = supabase
 

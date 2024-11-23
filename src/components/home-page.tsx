@@ -13,7 +13,6 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useSearchParams, useRouter } from 'next/navigation'
 import LoadingScreen from '@/components/loading-screen'
 import ErrorScreen from '@/components/error-screen'
-import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { UpgradePlanModal } from '@/components/upgrade-plan-modal'
 import { cn } from '@/lib/utils'
@@ -33,7 +32,6 @@ export default function HomePage() {
   const [showAuthModal, setShowAuthModal] = useState(false)
   const { user, subscription, plan, isLoading, error, refreshSubscription } = useAuth()
   const isAuthenticated = !!user
-  const [apiKey, setApiKey] = useState<string | null>(null)
   const searchParams = useSearchParams()
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false)
   const router = useRouter()
@@ -49,7 +47,6 @@ export default function HomePage() {
             throw new Error('Failed to verify session')
           }
           await refreshSubscription()
-          // Use replace instead of push to avoid adding to history
           window.history.replaceState({}, '', '/')
         } catch (err) {
           console.error('Error verifying session:', err)
@@ -64,18 +61,6 @@ export default function HomePage() {
       refreshSubscription()
     }
   }, [user, refreshSubscription])
-
-  const handleApiKeySubmit = async (key: string) => {
-    setApiKey(key)
-    if (user) {
-      const { error } = await supabase
-        .from('user_settings')
-        .upsert({ user_id: user.id, openai_api_key: key })
-      if (error) {
-        console.error('Error saving API key:', error)
-      }
-    }
-  }
 
   const handleTopicSelect = (topic: string) => {
     setShowChat(true)
@@ -123,10 +108,7 @@ export default function HomePage() {
         )
       case 'history':
         return isPremiumUser ? (
-          <HistoryPage
-            conversations={conversations}
-            setCurrentConversation={setCurrentConversation}
-          />
+          <HistoryPage />
         ) : (
           <div className="flex flex-col items-center justify-center min-h-[calc(100vh-4rem)]">
             <h2 className="text-2xl font-bold mb-4">Premium Feature</h2>
@@ -155,8 +137,6 @@ export default function HomePage() {
                       )
                       setCurrentConversation(updatedConversation)
                     }}
-                    apiKey={apiKey}
-                    onApiKeySubmit={handleApiKeySubmit}
                   />
                 </div>
               )}

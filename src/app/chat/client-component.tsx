@@ -7,6 +7,8 @@ import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
+import { Card, CardContent } from '@/components/ui/card'
+import { initializeOrUpdateUserSettings } from '@/lib/api-utils'
 
 type Message = {
   content: string;
@@ -25,6 +27,7 @@ export default function ChatPageClient() {
   const { user } = useAuth()
   const initialQuery = searchParams?.get('q')
   const [apiKey, setApiKey] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
   const [conversation, setConversation] = useState<Conversation>({
     id: Date.now().toString(),
     title: initialQuery || 'New Chat',
@@ -32,92 +35,46 @@ export default function ChatPageClient() {
   })
 
   useEffect(() => {
-    if (user) {
-      const fetchApiKey = async () => {
+    const initializeChat = async () => {
+      if (!user) {
+        setIsLoading(false)
+        return
+      }
+
+      try {
+        await initializeOrUpdateUserSettings(user.id)
+
         const { data, error } = await supabase
           .from('user_settings')
           .select('openai_api_key')
           .eq('user_id', user.id)
           .single()
 
-        if (!error && data?.openai_api_key) {
-          setApiKey(data.openai_api_key)
-        }
-      }
-      fetchApiKey()
-    }
-  }, [user])
-
-  const handleSaveToHistory = async (updatedConversation: Conversation) => {
-    if (!user) return
-
-    try {
-      const { error } = await supabase
-        .from('chat_history')
-        .upsert({
-          id: updatedConversation.id,
-          user_id: user.id,
-          title: updatedConversation.title,
-          messages: updatedConversation.messages,
-          updated_at: new Date().toISOString()
-        })
-
-      if (error) throw error
-    } catch (error) {
-      console.error('Error saving chat:', error)
-    }
-  }
-
-  const handleApiKeySubmit = async (key: string) => {
-    setApiKey(key)
-    if (user) {
-      try {
-        // First check if user settings exist
-        const { data: existingSettings, error: fetchError } = await supabase
-          .from('user_settings')
-          .select('*')
-          .eq('user_id', user.id)
-          .maybeSingle()
-
-        if (fetchError) {
-          console.error('Error checking settings:', fetchError)
-          return
-        }
-
-        if (existingSettings) {
-          // Update existing settings
-          const { error: updateError } = await supabase
-            .from('user_settings')
-            .update({
-              openai_api_key: key,
-              updated_at: new Date().toISOString()
-            })
-            .eq('user_id', user.id)
-
-          if (updateError) {
-            console.error('Error updating API key:', updateError)
-          }
+        if (error) {
+          console.error('Error fetching API key:', error)
+          setApiKey(null)
         } else {
-          // Create new settings
-          const { error: insertError } = await supabase
-            .from('user_settings')
-            .insert({
-              user_id: user.id,
-              openai_api_key: key,
-              plan: 'free',
-              is_premium: false,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            })
-
-          if (insertError) {
-            console.error('Error inserting API key:', insertError)
-          }
+          setApiKey(data?.openai_api_key || null)
         }
       } catch (error) {
-        console.error('Error in handleApiKeySubmit:', error)
+        console.error('Error initializing chat:', error)
+        setApiKey(null)
+      } finally {
+        setIsLoading(false)
       }
     }
+
+    initializeChat()
+  }, [user])
+
+  if (isLoading) {
+    return (
+      <Card className="w-full">
+        <CardContent className="p-6 text-center">
+          <div className="animate-pulse">Loading...</div>
+        </CardContent>
+      </Card>
+    )
   }
 
   return (
@@ -141,8 +98,6 @@ export default function ChatPageClient() {
           conversation={conversation}
           onUpdateConversation={setConversation}
           apiKey={apiKey}
-          onApiKeySubmit={handleApiKeySubmit}
-          onSaveToHistory={handleSaveToHistory}
         />
       </div>
     </div>

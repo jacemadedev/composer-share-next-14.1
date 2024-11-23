@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react'
 import { supabase, supabaseAuth } from '@/lib/supabase'
+import { initializeOrUpdateUserSettings } from '@/lib/api-utils'
 
 interface AuthContextType {
   user: LocalUser | null
@@ -67,72 +68,80 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchUserData = useCallback(async (userId: string) => {
     try {
-      // First try to get or create user settings
-      const { data: settingsData, error: settingsError } = await supabase
-        .from('user_settings')
-        .upsert({
-          user_id: userId,
-          plan: 'free',
-          is_premium: false,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'user_id'
-        })
-        .select()
-        .single()
+      // Initialize user settings with default values
+      await initializeOrUpdateUserSettings(userId)
 
-      if (settingsError) {
-        console.error('Settings error:', settingsError)
-        setPlan('free')
-      } else {
-        setPlan(settingsData?.plan || 'free')
-      }
+      // Then check for active subscription
+      const { data: subscriptionData, error: subscriptionError } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
 
-      // Then check for active subscription - get the most recent one
-      try {
-        const { data: subscriptionData, error: subscriptionError } = await supabase
-          .from('subscriptions')
-          .select('*')
-          .eq('user_id', userId)
-          .eq('status', 'active')
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle()
-
-        if (subscriptionError) {
-          console.error('Subscription error:', subscriptionError)
-          setSubscription(null)
-        } else if (subscriptionData) {
-          setSubscription(subscriptionData)
-          // If we have an active subscription, ensure plan is set to premium
-          if (subscriptionData.status === 'active') {
-            setPlan('premium')
-            // Update user_settings to reflect premium status
-            const { error: updateError } = await supabase
-              .from('user_settings')
-              .update({ 
-                plan: 'premium',
-                is_premium: true,
-                updated_at: new Date().toISOString()
-              })
-              .eq('user_id', userId)
-
-            if (updateError) {
-              console.error('Error updating user settings:', updateError)
-            }
-          }
-        } else {
-          setSubscription(null)
-        }
-      } catch (subError) {
-        console.error('Error fetching subscription:', subError)
+      if (subscriptionError) {
+        console.error('Subscription error:', subscriptionError)
         setSubscription(null)
+        setPlan('free')
+      } else if (subscriptionData?.status === 'active') {
+        setSubscription(subscriptionData)
+        // Only set as premium if not scheduled for cancellation
+        if (!subscriptionData.cancel_at_period_end) {
+          setPlan('premium')
+          await initializeOrUpdateUserSettings(userId, {
+            plan: 'premium',
+            is_premium: true
+          })
+        } else {
+          // Keep current plan until subscription actually ends
+          console.log('Subscription active but scheduled for cancellation')
+        }
+      } else {
+        setSubscription(null)
+        setPlan('free')
+        await initializeOrUpdateUserSettings(userId, {
+          plan: 'free',
+          is_premium: false
+        })
       }
     } catch (err) {
       console.error('Error in fetchUserData:', err)
       setSubscription(null)
       setPlan('free')
+    }
+  }, [])
+
+  const initializeUserSettings = useCallback(async (userId: string) => {
+    try {
+      // First check if settings exist
+      const { data: existingSettings, error: fetchError } = await supabase
+        .from('user_settings')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle()
+
+      if (!existingSettings && !fetchError) {
+        // Create initial settings if they don't exist
+        const { error: insertError } = await supabase
+          .from('user_settings')
+          .insert({
+            user_id: userId,
+            plan: 'free',
+            is_premium: false,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            theme: 'light',
+            openai_api_key: null // Explicitly set to null initially
+          })
+
+        if (insertError) {
+          console.error('Error creating initial user settings:', insertError)
+        }
+      }
+    } catch (error) {
+      console.error('Error initializing user settings:', error)
     }
   }, [])
 
@@ -145,7 +154,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         console.log('Initializing auth...')
         
-        // First try to recover the session
         const { data: { session }, error: sessionError } = await supabaseAuth.auth.getSession()
         
         if (sessionError) {
@@ -162,7 +170,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             email: session.user.email || '',
             user_metadata: session.user.user_metadata
           })
-          fetchUserData(session.user.id)
+          
+          // Initialize user settings before fetching data
+          await initializeUserSettings(session.user.id)
+          await fetchUserData(session.user.id)
         } else {
           console.log('No user found')
           setUser(null)
@@ -219,7 +230,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       clearTimeout(timeoutId)
       authListener.unsubscribe()
     }
-  }, [isInitialized, fetchUserData, resetAuth])
+  }, [isInitialized, fetchUserData, resetAuth, initializeUserSettings])
 
   const refreshSubscription = async (): Promise<void> => {
     if (!user) return
@@ -243,17 +254,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSubscription(data)
       if (data?.status === 'active') {
         setPlan('premium')
-        // Update user settings to reflect premium status
-        const { error: updateError } = await supabase
-          .from('user_settings')
-          .update({ 
-            plan: 'premium',
-            is_premium: true,
-            updated_at: new Date().toISOString()
-          })
-          .eq('user_id', user.id)
-
-        if (updateError) {
+        try {
+          await supabase
+            .from('user_settings')
+            .update({ 
+              plan: 'premium',
+              is_premium: true,
+              updated_at: new Date().toISOString()
+            })
+            .eq('user_id', user.id)
+        } catch (updateError) {
           console.error('Error updating user settings:', updateError)
         }
       }
