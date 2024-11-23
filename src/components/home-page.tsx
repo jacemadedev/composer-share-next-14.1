@@ -10,7 +10,7 @@ import HistoryPage from '@/components/history-page'
 import ChatInterface from '@/components/chat-interface'
 import { AuthModal } from '@/components/auth-modal'
 import { useAuth } from '@/contexts/AuthContext'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import LoadingScreen from '@/components/loading-screen'
 import ErrorScreen from '@/components/error-screen'
 import { supabase } from '@/lib/supabase'
@@ -36,6 +36,7 @@ export default function HomePage() {
   const [apiKey, setApiKey] = useState<string | null>(null)
   const searchParams = useSearchParams()
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false)
+  const router = useRouter()
 
   // Handle Stripe checkout return
   useEffect(() => {
@@ -57,6 +58,12 @@ export default function HomePage() {
       verifySession()
     }
   }, [searchParams, refreshSubscription])
+
+  useEffect(() => {
+    if (user) {
+      refreshSubscription()
+    }
+  }, [user, refreshSubscription])
 
   const handleApiKeySubmit = async (key: string) => {
     setApiKey(key)
@@ -83,15 +90,7 @@ export default function HomePage() {
   }
 
   const handleSearch = (query: string) => {
-    setShowChat(true)
-    setInitialMessage(`Search for: ${query}`)
-    const newConversation: Conversation = {
-      id: Date.now().toString(),
-      title: `Search: ${query}`,
-      messages: [{ content: `Search for: ${query}`, sender: 'user' }],
-    }
-    setConversations([...conversations, newConversation])
-    setCurrentConversation(newConversation)
+    router.push(`/chat?q=${encodeURIComponent(query)}`)
   }
 
   const renderPage = () => {

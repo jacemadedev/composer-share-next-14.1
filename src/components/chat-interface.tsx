@@ -4,6 +4,8 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
 import { Send } from 'lucide-react'
 import { ApiKeyInput } from './api-key-input'
+import { useAuth } from '@/contexts/AuthContext'
+import { supabase } from '@/lib/supabase'
 
 type Message = {
   content: string;
@@ -22,11 +24,97 @@ interface ChatInterfaceProps {
   onUpdateConversation: (updatedConversation: Conversation) => void;
   apiKey: string | null;
   onApiKeySubmit: (apiKey: string) => void;
+  onSaveToHistory?: (conversation: Conversation) => Promise<void>;
 }
 
-export default function ChatInterface({ initialMessage, conversation, onUpdateConversation, apiKey, onApiKeySubmit }: ChatInterfaceProps) {
+export default function ChatInterface({ initialMessage, conversation, onUpdateConversation, apiKey: providedApiKey, onApiKeySubmit, onSaveToHistory }: ChatInterfaceProps) {
   const [input, setInput] = useState('')
+  const [apiKey, setApiKey] = useState<string | null>(providedApiKey)
   const [isKeyValid, setIsKeyValid] = useState(false)
+  const { user } = useAuth()
+
+  // Fetch saved API key on mount
+  useEffect(() => {
+    const fetchSavedApiKey = async () => {
+      if (!user) return
+
+      try {
+        const { data, error } = await supabase
+          .from('user_settings')
+          .select('openai_api_key')
+          .eq('user_id', user.id)
+          .single()
+
+        if (error) {
+          console.error('Error fetching API key:', error)
+          return
+        }
+
+        if (data?.openai_api_key) {
+          setApiKey(data.openai_api_key)
+          validateApiKey(data.openai_api_key)
+        }
+      } catch (error) {
+        console.error('Error:', error)
+      }
+    }
+
+    if (!apiKey) {
+      fetchSavedApiKey()
+    }
+  }, [user, apiKey])
+
+  // Save API key to Supabase
+  const handleApiKeySubmit = async (key: string) => {
+    if (!user) return
+
+    try {
+      // First check if user settings exist
+      const { data: existingSettings, error: fetchError } = await supabase
+        .from('user_settings')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      if (fetchError) {
+        console.error('Error checking settings:', fetchError)
+        return
+      }
+
+      if (existingSettings) {
+        // Update existing settings
+        const { error: updateError } = await supabase
+          .from('user_settings')
+          .update({
+            openai_api_key: key,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', user.id)
+
+        if (updateError) throw updateError
+      } else {
+        // Create new settings
+        const { error: insertError } = await supabase
+          .from('user_settings')
+          .insert({
+            user_id: user.id,
+            openai_api_key: key,
+            plan: 'free',
+            is_premium: false,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+
+        if (insertError) throw insertError
+      }
+
+      setApiKey(key)
+      onApiKeySubmit(key)
+      validateApiKey(key)
+    } catch (error) {
+      console.error('Error saving API key:', error)
+    }
+  }
 
   const handleSend = useCallback(async (message: string = input) => {
     if (message.trim() && apiKey) {
@@ -65,6 +153,13 @@ export default function ChatInterface({ initialMessage, conversation, onUpdateCo
         }
         const finalMessages = [...updatedMessages, aiResponse]
         onUpdateConversation({ ...conversation, messages: finalMessages })
+
+        if (onSaveToHistory) {
+          await onSaveToHistory({
+            ...conversation,
+            messages: finalMessages
+          });
+        }
       } catch (error) {
         console.error('Error calling OpenAI API:', error)
         // Handle error (e.g., show error message to user)
@@ -72,7 +167,7 @@ export default function ChatInterface({ initialMessage, conversation, onUpdateCo
 
       setInput('')
     }
-  }, [input, apiKey, conversation, onUpdateConversation])
+  }, [input, apiKey, conversation, onUpdateConversation, onSaveToHistory])
 
   useEffect(() => {
     if (initialMessage && conversation.messages.length === 0) {
@@ -106,7 +201,7 @@ export default function ChatInterface({ initialMessage, conversation, onUpdateCo
       <Card className="w-full">
         <CardContent className="p-6">
           <h2 className="text-xl font-semibold mb-4">Enter Your OpenAI API Key</h2>
-          <ApiKeyInput onApiKeySubmit={onApiKeySubmit} isKeyValid={isKeyValid} />
+          <ApiKeyInput onApiKeySubmit={handleApiKeySubmit} isKeyValid={isKeyValid} />
         </CardContent>
       </Card>
     )

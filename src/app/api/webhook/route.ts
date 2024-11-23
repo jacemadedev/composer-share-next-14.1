@@ -166,18 +166,17 @@ async function handleSuccessfulSubscription(session: Stripe.Checkout.Session) {
   const subscription = await stripe.subscriptions.retrieve(session.subscription as string)
   console.log('Retrieved subscription:', subscription.id)
 
-  try {
-    // Get the customer ID as string
-    const customerId = typeof session.customer === 'string' 
-      ? session.customer 
-      : session.customer?.id || null
+  const userId = session.client_reference_id!
+  const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id
 
-    // First update subscription using admin client
+  try {
+    // First update subscription
     const { error: subError } = await supabaseAdmin
       .from('subscriptions')
       .upsert({ 
-        user_id: session.client_reference_id!, 
-        customer_id: customerId, // Use the properly typed customer ID
+        id: subscription.id,
+        user_id: userId,
+        customer_id: customerId,
         status: subscription.status,
         price_id: subscription.items.data[0].price.id,
         quantity: subscription.items.data[0].quantity,
@@ -192,27 +191,21 @@ async function handleSuccessfulSubscription(session: Stripe.Checkout.Session) {
         trial_end: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null
       })
 
-    if (subError) {
-      console.error('Error updating subscription:', subError)
-      throw new Error(`Failed to update subscription: ${subError.message}`)
-    }
+    if (subError) throw subError
 
-    // Then update user settings using admin client
+    // Then update user settings
     const { error: settingsError } = await supabaseAdmin
       .from('user_settings')
-      .update({ 
+      .upsert({ 
+        user_id: userId,
         plan: 'premium',
         is_premium: true,
         updated_at: new Date().toISOString()
       })
-      .eq('user_id', session.client_reference_id!)
 
-    if (settingsError) {
-      console.error('Error updating user settings:', settingsError)
-      throw new Error(`Failed to update user settings: ${settingsError.message}`)
-    }
+    if (settingsError) throw settingsError
 
-    console.log('Successfully processed subscription for user:', session.client_reference_id)
+    console.log('Successfully processed subscription for user:', userId)
   } catch (error) {
     console.error('Error in handleSuccessfulSubscription:', error)
     throw error

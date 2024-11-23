@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react'
-import { supabaseAuth } from '@/lib/supabase'
+import { supabase, supabaseAuth } from '@/lib/supabase'
 
 interface AuthContextType {
   user: LocalUser | null
@@ -67,66 +67,74 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchUserData = useCallback(async (userId: string) => {
     try {
-      // First check if user settings exist
-      const { data: settingsData, error: settingsError } = await supabaseAuth
+      // First try to get or create user settings
+      const { data: settingsData, error: settingsError } = await supabase
         .from('user_settings')
-        .select('plan, is_premium')
-        .eq('user_id', userId)
-        .single();
+        .upsert({
+          user_id: userId,
+          plan: 'free',
+          is_premium: false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id'
+        })
+        .select()
+        .single()
 
       if (settingsError) {
-        if (settingsError.code === 'PGRST116') {
-          // Create default user settings if they don't exist
-          const { data: newSettings, error: createError } = await supabaseAuth
-            .from('user_settings')
-            .insert([
-              { 
-                user_id: userId,
-                plan: 'free',
-                is_premium: false,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-              }
-            ])
-            .select()
-            .single();
+        console.error('Settings error:', settingsError)
+        setPlan('free')
+      } else {
+        setPlan(settingsData?.plan || 'free')
+      }
 
-          if (createError) {
-            console.error('Error creating user settings:', createError);
-            setPlan('free');
-          } else {
-            setPlan(newSettings?.plan || 'free');
+      // Then check for active subscription - get the most recent one
+      try {
+        const { data: subscriptionData, error: subscriptionError } = await supabase
+          .from('subscriptions')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('status', 'active')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+
+        if (subscriptionError) {
+          console.error('Subscription error:', subscriptionError)
+          setSubscription(null)
+        } else if (subscriptionData) {
+          setSubscription(subscriptionData)
+          // If we have an active subscription, ensure plan is set to premium
+          if (subscriptionData.status === 'active') {
+            setPlan('premium')
+            // Update user_settings to reflect premium status
+            const { error: updateError } = await supabase
+              .from('user_settings')
+              .update({ 
+                plan: 'premium',
+                is_premium: true,
+                updated_at: new Date().toISOString()
+              })
+              .eq('user_id', userId)
+
+            if (updateError) {
+              console.error('Error updating user settings:', updateError)
+            }
           }
         } else {
-          console.error('Settings fetch error:', settingsError);
-          setPlan('free');
+          setSubscription(null)
         }
-      } else {
-        setPlan(settingsData?.plan || 'free');
-      }
-
-      // Then fetch subscription data
-      const { data: subscriptionData, error: subscriptionError } = await supabaseAuth
-        .from('subscriptions')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('status', 'active')
-        .single();
-
-      if (subscriptionError) {
-        if (subscriptionError.code !== 'PGRST116') {
-          console.error('Subscription fetch error:', subscriptionError);
-        }
-        setSubscription(null);
-      } else {
-        setSubscription(subscriptionData);
+      } catch (subError) {
+        console.error('Error fetching subscription:', subError)
+        setSubscription(null)
       }
     } catch (err) {
-      console.error('Error fetching user data:', err);
-      setSubscription(null);
-      setPlan('free');
+      console.error('Error in fetchUserData:', err)
+      setSubscription(null)
+      setPlan('free')
     }
-  }, []);
+  }, [])
 
   useEffect(() => {
     let mounted = true
@@ -214,11 +222,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [isInitialized, fetchUserData, resetAuth])
 
   const refreshSubscription = async (): Promise<void> => {
+    if (!user) return
+
     try {
-      const { data, error } = await supabaseAuth
+      const { data, error } = await supabase
         .from('subscriptions')
         .select('*')
-        .single()
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
       
       if (error) {
         console.error('Subscription fetch error:', error)
@@ -227,8 +241,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       
       setSubscription(data)
+      if (data?.status === 'active') {
+        setPlan('premium')
+        // Update user settings to reflect premium status
+        const { error: updateError } = await supabase
+          .from('user_settings')
+          .update({ 
+            plan: 'premium',
+            is_premium: true,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', user.id)
+
+        if (updateError) {
+          console.error('Error updating user settings:', updateError)
+        }
+      }
     } catch (err) {
-      console.error('Unexpected error:', err)
+      console.error('Unexpected error in refreshSubscription:', err)
       setSubscription(null)
     }
   }
