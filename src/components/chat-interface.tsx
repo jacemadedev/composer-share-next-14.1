@@ -34,6 +34,7 @@ export default function ChatInterface({
   const [input, setInput] = useState('')
   const [apiKey, setApiKey] = useState<string | null>(externalApiKey || null)
   const [showSettings, setShowSettings] = useState(false)
+  const [isProcessingInitial, setIsProcessingInitial] = useState(false)
   const { user } = useAuth()
 
   const fetchApiKey = useCallback(async () => {
@@ -81,55 +82,101 @@ export default function ChatInterface({
   }, [externalApiKey])
 
   const handleSend = useCallback(async (message: string = input) => {
-    if (message.trim() && apiKey) {
-      const newMessage: Message = { content: message, sender: 'user' }
-      const updatedMessages = [...conversation.messages, newMessage]
-      const updatedConversation = { ...conversation, messages: updatedMessages }
-      onUpdateConversation(updatedConversation)
+    if (!message.trim() || !apiKey) return
 
-      try {
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${apiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'gpt-3.5-turbo',
-            messages: [
-              { role: 'system', content: 'You are a helpful assistant for a Git repository management tool.' },
-              ...updatedMessages.map(msg => ({
-                role: msg.sender === 'user' ? 'user' : 'assistant',
-                content: msg.content,
-              })),
-            ],
-          }),
-        })
+    const newMessage: Message = { content: message.trim(), sender: 'user' }
+    const updatedMessages = [...conversation.messages, newMessage]
+    onUpdateConversation({ ...conversation, messages: updatedMessages })
 
-        if (!response.ok) {
-          throw new Error('Failed to get response from OpenAI')
-        }
+    try {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-3.5-turbo',
+          messages: [
+            { role: 'system', content: 'You are a helpful assistant for a Git repository management tool.' },
+            ...updatedMessages.map(msg => ({
+              role: msg.sender === 'user' ? 'user' : 'assistant',
+              content: msg.content,
+            })),
+          ],
+        }),
+      })
 
-        const data = await response.json()
-        const aiResponse: Message = { 
-          content: data.choices[0].message.content, 
-          sender: 'assistant' 
-        }
-        const finalMessages = [...updatedMessages, aiResponse]
-        onUpdateConversation({ ...conversation, messages: finalMessages })
-      } catch (error) {
-        console.error('Error calling OpenAI API:', error)
+      if (!response.ok) {
+        throw new Error('Failed to get response from OpenAI')
       }
 
-      setInput('')
+      const data = await response.json()
+      const aiResponse: Message = { 
+        content: data.choices[0].message.content, 
+        sender: 'assistant' 
+      }
+      
+      const finalMessages = [...updatedMessages, aiResponse]
+      onUpdateConversation({ ...conversation, messages: finalMessages })
+    } catch (error) {
+      console.error('Error calling OpenAI API:', error)
     }
+
+    setInput('')
   }, [input, apiKey, conversation, onUpdateConversation])
 
   useEffect(() => {
-    if (initialMessage && conversation.messages.length === 0) {
-      handleSend(initialMessage)
+    const handleInitialMessage = async () => {
+      if (
+        initialMessage && 
+        apiKey && 
+        !isProcessingInitial && 
+        conversation.messages.length === 1 && 
+        conversation.messages[0].content === initialMessage
+      ) {
+        try {
+          setIsProcessingInitial(true)
+          
+          const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${apiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'gpt-3.5-turbo',
+              messages: [
+                { role: 'system', content: 'You are a helpful assistant for a Git repository management tool.' },
+                { role: 'user', content: initialMessage }
+              ],
+            }),
+          })
+
+          if (!response.ok) {
+            throw new Error('Failed to get response from OpenAI')
+          }
+
+          const data = await response.json()
+          const aiResponse: Message = { 
+            content: data.choices[0].message.content, 
+            sender: 'assistant' as const
+          }
+
+          onUpdateConversation({
+            ...conversation,
+            messages: [...conversation.messages, aiResponse]
+          })
+        } catch (error) {
+          console.error('Error processing initial message:', error)
+        } finally {
+          setIsProcessingInitial(false)
+        }
+      }
     }
-  }, [initialMessage, conversation.messages.length, handleSend])
+
+    handleInitialMessage()
+  }, [initialMessage, apiKey, conversation, onUpdateConversation, isProcessingInitial])
 
   if (apiKey === null) {
     return (
