@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Home, BookOpen, Users, Clock, Settings, LogOut, CreditCard, ChevronRight, User, Menu, Crown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -11,12 +11,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { cn } from '@/lib/utils'
+import { supabase } from '@/lib/supabase'
 import { UpgradePlanModal } from './upgrade-plan-modal'
 import { UpgradePrompt } from './upgrade-prompt'
 import { Badge } from '@/components/ui/badge'
 import { ProfileModal } from './profile-modal'
 import { SettingsModal } from './settings-modal'
-import { useAuth } from '@/contexts/AuthContext'
 
 type NavItem = {
   icon: React.ElementType;
@@ -60,17 +60,6 @@ export default function Sidebar({
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false)
   const [showProfileModal, setShowProfileModal] = useState(false)
   const [showSettingsModal, setShowSettingsModal] = useState(false)
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-
-  const { resetAuth } = useAuth()
-
-  useEffect(() => {
-    if (isMobileMenuOpen) {
-      document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = 'unset'
-    }
-  }, [isMobileMenuOpen])
 
   const handleNavClick = (page: string, isPremiumPage: boolean) => {
     if (isPremiumPage && !isPremium) {
@@ -82,12 +71,7 @@ export default function Sidebar({
   }
 
   const handleSignOut = async () => {
-    try {
-      await resetAuth()
-    } catch (error) {
-      console.error('Error signing out:', error)
-      window.location.replace('/')
-    }
+    await supabase.auth.signOut()
   }
 
   const getPlanBadge = () => {
@@ -116,27 +100,9 @@ export default function Sidebar({
 
   return (
     <>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="fixed top-4 right-4 z-50 md:hidden"
-        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-      >
-        <Menu className="h-6 w-6" />
-      </Button>
-
-      {isMobileMenuOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
-          onClick={() => setIsMobileMenuOpen(false)}
-        />
-      )}
-
       <aside className={cn(
-        "bg-white border-r border-gray-200 transition-all duration-300 ease-in-out fixed h-full z-50",
-        isCollapsed ? "w-16" : "w-64",
-        "md:translate-x-0",
-        isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+        "bg-white border-r border-gray-200 transition-all duration-300 ease-in-out fixed h-full",
+        isCollapsed ? "w-16" : "w-64"
       )}>
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between p-4 border-b border-gray-200">

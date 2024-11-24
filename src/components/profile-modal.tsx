@@ -1,99 +1,104 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { useAuth } from '@/contexts/AuthContext'
-import { supabaseAuth } from '@/lib/supabase'
-import { toast } from 'sonner'
+import { supabase } from '@/lib/supabase'
 
 interface ProfileModalProps {
   isOpen: boolean
-  onClose: { (): void }
+  onClose: () => void
 }
 
-export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
+export function ProfileModal(props: ProfileModalProps) {
+  const { isOpen, onClose } = props
   const { user } = useAuth()
-  const [name, setName] = useState('')
-  const [isSaving, setIsSaving] = useState(false)
+  const [fullName, setFullName] = useState(user?.user_metadata?.name || '')
+  const [isLoading, setIsLoading] = useState(false)
 
-  useEffect(() => {
-    if (user && isOpen) {
-      setName(user.user_metadata?.name || '')
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!user?.id) {
+      console.error('No user ID found')
+      return
     }
-  }, [user, isOpen])
 
-  const handleOpenChange = (open: boolean) => {
-    if (!open) onClose()
-  }
+    setIsLoading(true)
 
-  const handleSave = async () => {
-    if (!user) return
-
-    setIsSaving(true)
     try {
-      const { error } = await supabaseAuth.auth.updateUser({
-        data: { 
-          name: name.trim(),
-          avatar_url: user.user_metadata?.avatar_url
-        }
+      const { error } = await supabase.auth.updateUser({
+        data: { name: fullName }
       })
 
       if (error) throw error
 
-      const { data: { session }, error: sessionError } = await supabaseAuth.auth.getSession()
-      if (sessionError) throw sessionError
+      // Update profile in database
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ full_name: fullName })
+        .eq('id', user.id)
 
-      if (session?.user) {
-        // Update local state if needed through AuthContext
-        // The auth listener in AuthContext should handle this automatically
-      }
+      if (profileError) throw profileError
 
-      toast.success('Profile updated successfully')
       onClose()
     } catch (error) {
       console.error('Error updating profile:', error)
-      toast.error('Failed to update profile')
     } finally {
-      setIsSaving(false)
+      setIsLoading(false)
     }
   }
 
+  if (!user) {
+    return null
+  }
+
   return (
-    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+    <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Profile</DialogTitle>
+          <DialogTitle>Edit Profile</DialogTitle>
           <DialogDescription>
-            Update your profile information.
+            Update your profile information
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-6 py-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Name</Label>
+            <Label htmlFor="name">Full Name</Label>
             <Input
               id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
               placeholder="Your name"
             />
           </div>
-          <Button 
-            onClick={handleSave} 
-            disabled={isSaving || !name.trim()}
-            className="w-full"
-          >
-            {isSaving ? 'Saving...' : 'Save Changes'}
-          </Button>
-        </div>
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              value={user.email}
+              disabled
+              className="bg-gray-100"
+            />
+          </div>
+          <div className="flex justify-end space-x-2">
+            <Button variant="outline" onClick={onClose} type="button">
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </div>
+        </form>
       </DialogContent>
     </Dialog>
   )

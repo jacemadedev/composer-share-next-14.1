@@ -1,232 +1,118 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { Input } from "@/components/ui/input"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useAuth } from '@/contexts/AuthContext'
-import { supabase, supabaseAuth } from '@/lib/supabase'
-import { CheckCircle2 } from 'lucide-react'
-import { toast } from 'sonner'
-
-interface ValidateApiKeyFunction {
-  (key: string): Promise<boolean>;
-  lastCall?: number;
-}
+import { supabase } from '@/lib/supabase'
+import { Database } from '@/types/supabase'
 
 interface SettingsModalProps {
-  isOpen: boolean;
-  onClose: { bivarianceHack(): void }["bivarianceHack"];
+  isOpen: boolean
+  onClose: () => void
 }
 
-export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
+type UserSettingsUpdate = Database['public']['Tables']['user_settings']['Update']
+
+export function SettingsModal(props: SettingsModalProps) {
+  const { isOpen, onClose } = props
   const { user } = useAuth()
-  const [apiKey, setApiKey] = useState('')
-  const [isKeyValid, setIsKeyValid] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
-  const [hasStoredKey, setHasStoredKey] = useState(false)
-  const [isEditing, setIsEditing] = useState(false)
-  const [maskedKey, setMaskedKey] = useState('')
+  const [theme, setTheme] = useState('light')
+  const [isLoading, setIsLoading] = useState(false)
 
-  const validateApiKey: ValidateApiKeyFunction = async (key: string): Promise<boolean> => {
-    try {
-      const now = Date.now()
-      if (validateApiKey.lastCall && now - validateApiKey.lastCall < 1000) {
-        return false
+  useEffect(() => {
+    if (user) {
+      const fetchSettings = async () => {
+        const { data, error } = await supabase
+          .from('user_settings')
+          .select('theme')
+          .eq('user_id', user.id)
+          .single()
+
+        if (!error && data?.theme) {
+          setTheme(data.theme)
+        }
       }
-      validateApiKey.lastCall = now
 
-      const response = await fetch('https://api.openai.com/v1/models', {
-        headers: {
-          'Authorization': `Bearer ${key}`,
-          'Content-Type': 'application/json',
-        },
-      })
-      const isValid = response.ok
-      setIsKeyValid(isValid)
-      return isValid
-    } catch (error) {
-      console.error('Error validating API key:', error)
-      setIsKeyValid(false)
-      return false
-    }
-  }
-
-  validateApiKey.lastCall = 0
-
-  const fetchApiKey = useCallback(async () => {
-    if (!user) return
-
-    try {
-      const { data, error } = await supabase
-        .from('user_settings')
-        .select('openai_api_key')
-        .eq('user_id', user.id)
-        .single()
-
-      if (!error && data?.openai_api_key) {
-        setHasStoredKey(true)
-        setIsKeyValid(true)
-        setMaskedKey(`sk-...${data.openai_api_key.slice(-4)}`)
-      } else {
-        setHasStoredKey(false)
-        setIsKeyValid(false)
-        setMaskedKey('')
-      }
-    } catch (error) {
-      console.error('Error fetching API key:', error)
-      setHasStoredKey(false)
-      setIsKeyValid(false)
-      setMaskedKey('')
+      fetchSettings()
     }
   }, [user])
 
-  useEffect(() => {
-    if (user && isOpen) {
-      fetchApiKey()
-      setIsEditing(false)
-      setApiKey('')
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!user?.id) {
+      console.error('No user ID found')
+      return
     }
-  }, [user, isOpen, fetchApiKey])
 
-  const handleClose = () => {
-    setIsEditing(false)
-    setApiKey('')
-    onClose()
-  }
+    setIsLoading(true)
 
-  const handleSaveApiKey = async () => {
-    if (!user || !apiKey) return
-
-    setIsSaving(true)
     try {
-      // Validate the API key first
-      const isValid = await validateApiKey(apiKey)
-      if (!isValid) {
-        toast.error('Invalid OpenAI API key')
-        return
+      const updateData: UserSettingsUpdate = {
+        theme,
+        updated_at: new Date().toISOString()
       }
 
-      // Get the session for the auth token
-      const { data: { session } } = await supabaseAuth.auth.getSession()
-      if (!session) {
-        throw new Error('No session found')
-      }
+      const { error } = await supabase
+        .from('user_settings')
+        .update(updateData)
+        .eq('user_id', user.id)
 
-      // Save API key through our API endpoint
-      const response = await fetch('/api/settings', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({ apiKey })
-      })
+      if (error) throw error
 
-      if (!response.ok) {
-        throw new Error('Failed to save API key')
-      }
-
-      setHasStoredKey(true)
-      toast.success('API key saved successfully')
-      
-      // Force a refresh of the parent component
-      await fetchApiKey()
       onClose()
     } catch (error) {
-      console.error('Error saving API key:', error)
-      toast.error('Failed to save API key')
+      console.error('Error updating settings:', error)
     } finally {
-      setIsSaving(false)
+      setIsLoading(false)
     }
+  }
+
+  if (!user) {
+    return null
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Settings</DialogTitle>
           <DialogDescription>
-            Configure your application settings and API keys.
+            Customize your app preferences
           </DialogDescription>
         </DialogHeader>
-
-        <div className="space-y-4 py-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label>OpenAI API Key</Label>
-            {hasStoredKey && !isEditing ? (
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <Input
-                    value={maskedKey}
-                    disabled
-                    type="text"
-                  />
-                  <Button
-                    onClick={() => setIsEditing(true)}
-                    variant="outline"
-                  >
-                    Edit
-                  </Button>
-                </div>
-                {isKeyValid && (
-                  <div className="flex items-center text-sm text-green-600">
-                    <CheckCircle2 className="mr-1 h-4 w-4" />
-                    Valid API key
-                  </div>
-                )}
+            <Label>Theme</Label>
+            <RadioGroup value={theme} onValueChange={setTheme}>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="light" id="light" />
+                <Label htmlFor="light">Light</Label>
               </div>
-            ) : (
-              <div className="space-y-2">
-                <Input
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  type="password"
-                  placeholder="sk-..."
-                />
-                {isKeyValid && (
-                  <div className="flex items-center text-sm text-green-600">
-                    <CheckCircle2 className="mr-1 h-4 w-4" />
-                    Valid API key
-                  </div>
-                )}
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="dark" id="dark" />
+                <Label htmlFor="dark">Dark</Label>
               </div>
-            )}
+            </RadioGroup>
           </div>
-        </div>
-
-        <div className="flex justify-end space-x-2">
-          {isEditing && (
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsEditing(false)
-                setApiKey('')
-              }}
-            >
+          <div className="flex justify-end space-x-2">
+            <Button variant="outline" onClick={onClose} type="button">
               Cancel
             </Button>
-          )}
-          {(isEditing || !hasStoredKey) && (
-            <Button
-              onClick={handleSaveApiKey}
-              disabled={!apiKey || isSaving}
-            >
-              {isSaving ? (
-                <>Saving...</>
-              ) : (
-                <>Save API Key</>
-              )}
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? 'Saving...' : 'Save Changes'}
             </Button>
-          )}
-        </div>
+          </div>
+        </form>
       </DialogContent>
     </Dialog>
   )
