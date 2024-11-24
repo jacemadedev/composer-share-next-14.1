@@ -10,12 +10,12 @@ import HistoryPage from '@/components/history-page'
 import ChatInterface from '@/components/chat-interface'
 import { AuthModal } from '@/components/auth-modal'
 import { useAuth } from '@/contexts/AuthContext'
-import { useSearchParams, useRouter } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import LoadingScreen from '@/components/loading-screen'
 import ErrorScreen from '@/components/error-screen'
+import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { UpgradePlanModal } from '@/components/upgrade-plan-modal'
-import { cn } from '@/lib/utils'
 
 type Conversation = {
   id: string;
@@ -32,9 +32,9 @@ export default function HomePage() {
   const [showAuthModal, setShowAuthModal] = useState(false)
   const { user, subscription, plan, isLoading, error, refreshSubscription } = useAuth()
   const isAuthenticated = !!user
+  const [apiKey, setApiKey] = useState<string | null>(null)
   const searchParams = useSearchParams()
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false)
-  const router = useRouter()
 
   // Handle Stripe checkout return
   useEffect(() => {
@@ -47,7 +47,8 @@ export default function HomePage() {
             throw new Error('Failed to verify session')
           }
           await refreshSubscription()
-          window.history.replaceState({}, '', '/')
+          // Use replace instead of href to avoid page reload
+          window.history.replaceState({}, '', window.location.pathname)
         } catch (err) {
           console.error('Error verifying session:', err)
         }
@@ -56,11 +57,17 @@ export default function HomePage() {
     }
   }, [searchParams, refreshSubscription])
 
-  useEffect(() => {
+  const handleApiKeySubmit = async (key: string) => {
+    setApiKey(key)
     if (user) {
-      refreshSubscription()
+      const { error } = await supabase
+        .from('user_settings')
+        .upsert({ user_id: user.id, openai_api_key: key })
+      if (error) {
+        console.error('Error saving API key:', error)
+      }
     }
-  }, [user, refreshSubscription])
+  }
 
   const handleTopicSelect = (topic: string) => {
     setShowChat(true)
@@ -75,7 +82,15 @@ export default function HomePage() {
   }
 
   const handleSearch = (query: string) => {
-    router.push(`/chat?q=${encodeURIComponent(query)}`)
+    setShowChat(true)
+    setInitialMessage(`Search for: ${query}`)
+    const newConversation: Conversation = {
+      id: Date.now().toString(),
+      title: `Search: ${query}`,
+      messages: [{ content: `Search for: ${query}`, sender: 'user' }],
+    }
+    setConversations([...conversations, newConversation])
+    setCurrentConversation(newConversation)
   }
 
   const renderPage = () => {
@@ -108,7 +123,10 @@ export default function HomePage() {
         )
       case 'history':
         return isPremiumUser ? (
-          <HistoryPage />
+          <HistoryPage
+            conversations={conversations}
+            setCurrentConversation={setCurrentConversation}
+          />
         ) : (
           <div className="flex flex-col items-center justify-center min-h-[calc(100vh-4rem)]">
             <h2 className="text-2xl font-bold mb-4">Premium Feature</h2>
@@ -137,13 +155,15 @@ export default function HomePage() {
                       )
                       setCurrentConversation(updatedConversation)
                     }}
+                    apiKey={apiKey}
+                    onApiKeySubmit={handleApiKeySubmit}
                   />
                 </div>
               )}
               <h1 className="text-4xl font-bold text-center text-gray-900">
                 GitAssist: Your Repo Assistant
               </h1>
-              <SearchBar searchCallback={handleSearch} />
+              <SearchBar onSearch={handleSearch} />
               <div>
                 <h2 className="text-2xl font-semibold mb-4">
                   Suggested Actions
@@ -174,14 +194,7 @@ export default function HomePage() {
         isPremium={subscription?.status === 'active' || plan === 'premium'}
         plan={plan}
       />
-      <main className={cn(
-        "flex-1 transition-all duration-300",
-        "p-4 md:p-8", // Smaller padding on mobile
-        "md:ml-64", // Only add margin on desktop
-        "w-full" // Full width on mobile
-      )}>
-        {renderPage()}
-      </main>
+      <main className="flex-1 ml-64 p-8">{renderPage()}</main>
       <AuthModal
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
