@@ -2,22 +2,41 @@ interface FeatureCardProps {
   icon: string;
   title: string;
   description: string;
-  position: 'left' | 'right' | 'center';
+  index: number;
 }
 
-export function FeatureCard({ icon, title, description, position }: FeatureCardProps) {
+export function FeatureCard({ icon, title, description, index }: FeatureCardProps) {
+  const getTransformClass = (index: number) => {
+    const patterns = [
+      '-rotate-[1.5deg] translate-y-2',     // Slight left tilt
+      'rotate-[2.5deg] -translate-y-1',     // Moderate right tilt
+      '-rotate-[0.5deg] translate-y-1',     // Very slight left tilt
+      'rotate-[1deg] -translate-y-2',       // Minimal right tilt
+      '-rotate-[2deg] translate-y-3',       // Medium left tilt
+      'rotate-[0.5deg] -translate-y-1',     // Barely noticeable right tilt
+    ];
+    
+    const isRightSide = index >= 3; // Assuming 3 cards on each side
+    const patternIndex = isRightSide 
+      ? (index - 3) % patterns.length  // Right side starts from beginning
+      : (patterns.length - 1 - index) % patterns.length; // Left side reversed
+
+    return patterns[patternIndex];
+  };
+
   return (
     <div className={`
       p-6 relative
-      transform transition-all duration-300
-      ${position === 'left' ? '-rotate-3' : position === 'right' ? 'rotate-3' : ''}
+      transform transition-all duration-500
+      ${getTransformClass(index)}
+      hover:rotate-0 hover:translate-y-0
       bg-white
       border border-gray-100
       shadow-sm
       hover:shadow-md
       rounded-2xl
       backdrop-blur-sm
-      hover:-translate-y-1
+      hover:scale-[1.02]
     `}>
       {/* Icon Container */}
       <div className="flex items-start gap-3">

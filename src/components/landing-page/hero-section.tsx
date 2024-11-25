@@ -77,7 +77,7 @@ export function HeroSection({ onAuthClick }: HeroSectionProps) {
           </Button>
         </div>
         <div className="mt-4 text-sm text-green-500 bg-green-50 px-4 py-1 rounded-full inline-block">
-          33 people joined today!
+          Early bird discount applied
         </div>
       </div>
     </div>
