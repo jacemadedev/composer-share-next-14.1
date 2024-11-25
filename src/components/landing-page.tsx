@@ -12,6 +12,7 @@ import { BentoGridThirdDemo } from '@/components/ui/bento-grid'
 import { Button } from '@/components/ui/button'
 import { ArrowRight } from 'lucide-react'
 import { Footer } from './landing-page/footer'
+import { StarterKits } from './landing-page/starter-kits'
 
 const LEFT_FEATURES = [
   {
@@ -134,6 +135,9 @@ export default function LandingPage() {
           <BentoGridThirdDemo />
         </div>
       </div>
+
+      {/* Pass the auth handler to StarterKits */}
+      <StarterKits onAuthClick={() => setShowAuthModal(true)} />
 
       <Footer />
 

@@ -1,12 +1,12 @@
 import Link from 'next/link'
-import { Github } from 'lucide-react'
+import { Github, Twitter } from 'lucide-react'
 
 export function Footer() {
   const links = [
-    { href: "/", label: "Home" },
-    { href: "/documentation", label: "Documentation" },
-    { href: "/guides", label: "Guides" },
-    { href: "/help", label: "Help" },
+    { href: "https://composers.dev", label: "Home" },
+    { href: "https://github.com/Composers-dev", label: "Documentation" },
+    { href: "https://github.com/Composers-dev", label: "Guides" },
+    { href: "https://github.com/Composers-dev", label: "Help" },
   ]
 
   return (
@@ -15,7 +15,7 @@ export function Footer() {
         <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
           {/* Left side - Links */}
           <div className="flex flex-wrap items-center gap-x-6 gap-y-1 justify-center md:justify-start">
-            <Link href="/" className="text-sm">
+            <Link href="https://composers.dev" className="text-sm">
               Composers.dev
             </Link>
             {links.map((link) => (
@@ -31,13 +31,16 @@ export function Footer() {
 
           {/* Right side - Command Menu & Social */}
           <div className="flex items-center gap-4">
-            <button className="text-sm text-gray-500 hover:text-gray-800">
-              Command Menu
-            </button>
+            <Link 
+              href="https://x.com/madebyjace"
+              className="text-sm text-gray-500 hover:text-gray-800"
+            >
+              Change log
+            </Link>
             <span className="text-gray-300">⌘</span>
             <span className="text-gray-300">K</span>
             <Link 
-              href="https://github.com/madebyjace"
+              href="https://github.com/Composers-dev"
               target="_blank"
               rel="noopener noreferrer"
               className="text-gray-500 hover:text-gray-800"

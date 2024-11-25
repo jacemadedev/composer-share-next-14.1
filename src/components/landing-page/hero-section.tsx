@@ -6,6 +6,24 @@ interface HeroSectionProps {
   onAuthClick: () => void;
 }
 
+const TECH_BADGES = [
+  { label: "Next.js", color: "bg-black text-white" },
+  { label: "Vite", color: "bg-purple-500/10 text-purple-700" },
+  { label: "React", color: "bg-blue-500/10 text-blue-700" },
+  { label: "TypeScript", color: "bg-blue-600/10 text-blue-800" },
+  { label: "Supabase", color: "bg-emerald-500/10 text-emerald-700" },
+  { label: "OpenAI", color: "bg-green-500/10 text-green-700" },
+  { label: "Photoroom", color: "bg-pink-500/10 text-pink-700" },
+  { label: "FFMPEG", color: "bg-orange-500/10 text-orange-700" },
+  { label: "Stripe", color: "bg-indigo-500/10 text-indigo-700" },
+  { label: "Vercel", color: "bg-gray-900/10 text-gray-700" },
+  { label: "Tailwind", color: "bg-cyan-500/10 text-cyan-700" },
+  { label: "shadcn/ui", color: "bg-slate-500/10 text-slate-700" },
+  { label: "Framer Motion", color: "bg-purple-400/10 text-purple-600" },
+  { label: "ESLint", color: "bg-violet-500/10 text-violet-700" },
+  { label: "Prettier", color: "bg-pink-400/10 text-pink-600" }
+]
+
 export function HeroSection({ onAuthClick }: HeroSectionProps) {
   return (
     <div className="flex flex-col items-center text-center">
@@ -27,9 +45,21 @@ export function HeroSection({ onAuthClick }: HeroSectionProps) {
       <h1 className="text-5xl md:text-7xl font-bold mb-6 tracking-tight leading-tight">
         The easiest way to<br />develop in bolt
       </h1>
-      <p className="text-xl text-gray-600 mb-12">
+      <p className="text-xl text-gray-600 mb-6">
         #1 Composers.dev & Cursor Boilerplates
       </p>
+
+      {/* Tech Stack Badges */}
+      <div className="flex flex-wrap justify-center gap-2 mb-12 max-w-3xl">
+        {TECH_BADGES.map((tech, index) => (
+          <span
+            key={index}
+            className={`px-3 py-1 text-sm rounded-full ${tech.color} font-medium`}
+          >
+            {tech.label}
+          </span>
+        ))}
+      </div>
       
       <div className="w-full max-w-xl mx-auto">
         <div className="relative flex items-center">

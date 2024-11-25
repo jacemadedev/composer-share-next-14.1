@@ -1,9 +1,9 @@
 export function TechStack() {
   return (
     <div className="mt-16 text-center">
-      <p className="text-gray-600 mb-4">Modern Tech Stacks</p>
+      <p className="text-gray-600 mb-4">Create for AI Developers</p>
       <div className="flex flex-wrap justify-center gap-6">
-        {['Vite', 'Remix', 'Shadcn', 'React', 'Vercel'].map((tech) => (
+        {['Bolt', 'Cursor', 'v0', 'Replit'].map((tech) => (
           <span key={tech} className="text-gray-800">
             {tech}
           </span>
