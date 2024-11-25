@@ -9,8 +9,8 @@ import { HeroSection } from './landing-page/hero-section'
 import { FeatureCard } from './landing-page/feature-card'
 import { TechStack } from './landing-page/tech-stack'
 import { UseCases } from './landing-page/use-cases'
-import { FeaturesDetailed } from './landing-page/features-detailed'
 import { GettingStarted } from './landing-page/getting-started'
+import { BentoGridThirdDemo } from '@/components/ui/bento-grid'
 
 const LEFT_FEATURES = [
   {
@@ -130,7 +130,18 @@ export default function LandingPage() {
 
       {/* Additional Sections */}
       <UseCases />
-      <FeaturesDetailed />
+      
+      {/* Bento Grid Section */}
+      <div className="container mx-auto py-24 px-4">
+        <h2 className="text-3xl font-bold text-center mb-4">
+          Everything You Need
+        </h2>
+        <p className="text-gray-600 text-center mb-12 max-w-2xl mx-auto">
+          A complete development stack with all the features you need to build modern AI-powered applications
+        </p>
+        <BentoGridThirdDemo />
+      </div>
+
       <GettingStarted />
 
       <AuthModal
