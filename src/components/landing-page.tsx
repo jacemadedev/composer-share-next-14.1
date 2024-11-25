@@ -8,7 +8,6 @@ import { NavBar } from './landing-page/nav-bar'
 import { HeroSection } from './landing-page/hero-section'
 import { FeatureCard } from './landing-page/feature-card'
 import { TechStack } from './landing-page/tech-stack'
-import { UseCases } from './landing-page/use-cases'
 import { GettingStarted } from './landing-page/getting-started'
 import { BentoGridThirdDemo } from '@/components/ui/bento-grid'
 
@@ -70,16 +69,8 @@ export default function LandingPage() {
       <div className="container mx-auto py-16">
         {/* Hero Section with Feature Cards */}
         <div className="relative">
-          {/* Left Features - Hidden on mobile, shown on larger screens */}
-          <div className="
-            hidden lg:block 
-            absolute top-1/2 -translate-y-1/2 
-            space-y-6
-            w-[340px]
-            -left-6
-            xl:-left-12 
-            2xl:-left-16
-          ">
+          {/* Left Features */}
+          <div className="hidden lg:block absolute top-1/2 -translate-y-1/2 space-y-6 w-[340px] -left-6 xl:-left-12 2xl:-left-16">
             {LEFT_FEATURES.map((feature, index) => (
               <FeatureCard 
                 key={index} 
@@ -93,7 +84,7 @@ export default function LandingPage() {
           <div className="max-w-3xl mx-auto px-4 z-10 relative">
             <HeroSection onAuthClick={() => setShowAuthModal(true)} />
             
-            {/* Mobile Features - Shown on mobile, hidden on larger screens */}
+            {/* Mobile Features */}
             <div className="lg:hidden mt-12 space-y-6">
               {[...LEFT_FEATURES, ...RIGHT_FEATURES].map((feature, index) => (
                 <FeatureCard 
@@ -105,16 +96,8 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Right Features - Hidden on mobile, shown on larger screens */}
-          <div className="
-            hidden lg:block 
-            absolute top-1/2 -translate-y-1/2 
-            space-y-6
-            w-[340px]
-            -right-6
-            xl:-right-12
-            2xl:-right-16
-          ">
+          {/* Right Features */}
+          <div className="hidden lg:block absolute top-1/2 -translate-y-1/2 space-y-6 w-[340px] -right-6 xl:-right-12 2xl:-right-16">
             {RIGHT_FEATURES.map((feature, index) => (
               <FeatureCard 
                 key={index} 
@@ -128,9 +111,6 @@ export default function LandingPage() {
         <TechStack />
       </div>
 
-      {/* Additional Sections */}
-      <UseCases />
-      
       {/* Bento Grid Section */}
       <div className="container mx-auto py-24 px-4">
         <h2 className="text-3xl font-bold text-center mb-4">
