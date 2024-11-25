@@ -1,12 +1,52 @@
 'use client'
 
-import { Button } from '@/components/ui/button'
-import { AuthModal } from '@/components/auth-modal'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
-import { ArrowRight } from 'lucide-react'
-import Link from 'next/link'
+import { AuthModal } from '@/components/auth-modal'
+import { NavBar } from './landing-page/nav-bar'
+import { HeroSection } from './landing-page/hero-section'
+import { FeatureCard } from './landing-page/feature-card'
+import { TechStack } from './landing-page/tech-stack'
+import { UseCases } from './landing-page/use-cases'
+import { FeaturesDetailed } from './landing-page/features-detailed'
+import { GettingStarted } from './landing-page/getting-started'
+
+const LEFT_FEATURES = [
+  {
+    icon: '🎨',
+    title: 'Modern Design System',
+    description: 'Beautiful, responsive design with Tailwind CSS, dark mode, and Framer Motion animations'
+  },
+  {
+    icon: '🔒',
+    title: 'Secure Authentication',
+    description: 'Supabase authentication, protected routes, and type-safe API calls'
+  },
+  {
+    icon: '💳',
+    title: 'Payment Integration',
+    description: 'Stripe integration with subscription management and usage-based billing'
+  },
+]
+
+const RIGHT_FEATURES = [
+  {
+    icon: '🤖',
+    title: 'AI-Powered Features',
+    description: 'OpenAI API integration with chat interface and token usage tracking'
+  },
+  {
+    icon: '⚡',
+    title: 'Lightning Fast',
+    description: 'Vite for fast development, optimized builds, and lazy loading'
+  },
+  {
+    icon: '🛠️',
+    title: 'Modern Stack',
+    description: 'React, TypeScript, Tailwind, shadcn/ui, Supabase, Stripe, and more'
+  },
+]
 
 export default function LandingPage() {
   const [showAuthModal, setShowAuthModal] = useState(false)
@@ -24,124 +64,79 @@ export default function LandingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Navigation */}
-      <nav className="flex items-center justify-between p-4 md:px-6">
-        <div className="flex items-center">
-          <h1 className="text-xl font-bold">Composers.dev</h1>
-        </div>
-        <div className="flex items-center gap-4">
-          <Button 
-            variant="ghost" 
-            size="sm"
-            className="hidden md:inline-flex"
-            onClick={() => setShowAuthModal(true)}
-          >
-            Sign in
-          </Button>
-          <Button 
-            size="sm"
-            onClick={() => setShowAuthModal(true)}
-          >
-            Get started
-          </Button>
-        </div>
-      </nav>
+    <div className="min-h-screen bg-white overflow-x-hidden">
+      <NavBar onAuthClick={() => setShowAuthModal(true)} />
+      
+      <div className="container mx-auto py-16">
+        {/* Hero Section with Feature Cards */}
+        <div className="relative">
+          {/* Left Features - Hidden on mobile, shown on larger screens */}
+          <div className="
+            hidden lg:block 
+            absolute top-1/2 -translate-y-1/2 
+            space-y-6
+            w-[340px]
+            -left-6
+            xl:-left-12 
+            2xl:-left-16
+          ">
+            {LEFT_FEATURES.map((feature, index) => (
+              <FeatureCard 
+                key={index} 
+                {...feature} 
+                position="left"
+              />
+            ))}
+          </div>
 
-      {/* Hero Section */}
-      <div className="container mx-auto px-4 py-16">
-        <div className="flex flex-col items-center max-w-5xl mx-auto">
-          {/* Product Hunt Badge */}
-          <Link 
-            href="https://www.producthunt.com"
-            className="flex items-center gap-2 px-4 py-1.5 mb-8 rounded-full bg-white border hover:bg-gray-50 transition-colors"
-          >
-            <span>Product Hunt</span>
-            <ArrowRight className="h-4 w-4" />
-          </Link>
-
-          <div className="text-center mb-12">
-            <h1 className="text-5xl md:text-7xl font-bold mb-6 tracking-tight">
-              The easiest way to<br />develop in bolt
-            </h1>
-            <p className="text-xl text-gray-600 mb-8">
-              #1 Composers.dev & Cursor Boilerplates
-            </p>
+          {/* Hero Content */}
+          <div className="max-w-3xl mx-auto px-4 z-10 relative">
+            <HeroSection onAuthClick={() => setShowAuthModal(true)} />
             
-            <div className="flex flex-col md:flex-row items-center justify-center gap-4">
-              <div className="w-full md:w-auto">
-                <input
-                  type="email"
-                  placeholder="Enter your email address"
-                  className="w-full md:w-[320px] px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            {/* Mobile Features - Shown on mobile, hidden on larger screens */}
+            <div className="lg:hidden mt-12 space-y-6">
+              {[...LEFT_FEATURES, ...RIGHT_FEATURES].map((feature, index) => (
+                <FeatureCard 
+                  key={index} 
+                  {...feature} 
+                  position="center"
                 />
-              </div>
-              <Button 
-                size="lg"
-                className="w-full md:w-auto"
-                onClick={() => setShowAuthModal(true)}
-              >
-                I want to get it <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </div>
-
-            <div className="mt-4 text-sm text-green-500">
-              33 people joined today!
-            </div>
-          </div>
-
-          {/* Feature Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full">
-            <FeatureCard
-              icon="🎨"
-              title="Modern UI/UX"
-              description="Beautiful, responsive design with Tailwind CSS, dark mode, and Framer Motion animations"
-            />
-            <FeatureCard
-              icon="🔒"
-              title="Authentication & Security"
-              description="Supabase authentication, protected routes, and type-safe API calls"
-            />
-            <FeatureCard
-              icon="💳"
-              title="Payments"
-              description="Stripe integration with subscription management and usage-based billing"
-            />
-            <FeatureCard
-              icon="🤖"
-              title="AI Integration"
-              description="OpenAI API integration with chat interface and token usage tracking"
-            />
-          </div>
-
-          {/* Tech Stack */}
-          <div className="mt-16 text-center">
-            <p className="text-gray-600 mb-4">Modern Tech Stacks</p>
-            <div className="flex flex-wrap justify-center gap-6">
-              {['Vite', 'Remix', 'Shadcn', 'React', 'Vercel'].map((tech) => (
-                <span key={tech} className="text-gray-800">
-                  {tech}
-                </span>
               ))}
             </div>
           </div>
+
+          {/* Right Features - Hidden on mobile, shown on larger screens */}
+          <div className="
+            hidden lg:block 
+            absolute top-1/2 -translate-y-1/2 
+            space-y-6
+            w-[340px]
+            -right-6
+            xl:-right-12
+            2xl:-right-16
+          ">
+            {RIGHT_FEATURES.map((feature, index) => (
+              <FeatureCard 
+                key={index} 
+                {...feature} 
+                position="right"
+              />
+            ))}
+          </div>
         </div>
+
+        <TechStack />
       </div>
+
+      {/* Additional Sections */}
+      <UseCases />
+      <FeaturesDetailed />
+      <GettingStarted />
 
       <AuthModal
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
       />
-    </div>
-  )
-}
-
-function FeatureCard({ icon, title, description }: { icon: string; title: string; description: string }) {
-  return (
-    <div className="p-6 rounded-lg border bg-white">
-      <div className="text-2xl mb-3">{icon}</div>
-      <h3 className="text-lg font-semibold mb-2">{title}</h3>
-      <p className="text-sm text-gray-600">{description}</p>
     </div>
   )
 } 
