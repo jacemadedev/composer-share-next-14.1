@@ -1,15 +1,23 @@
-# Composer Kit - AI Assistant
+# GitAssist - AI Assistant
 
 A Next.js application that helps developers manage their repositories and collaborate using AI assistance.
 
 ## Features
 
+- 🤖 Landing page for new visitors
 - 🤖 AI-powered code assistance
 - 📚 Access to starter kits (Premium)
 - 👥 Collaboration tools (Premium)
 - 🕒 History tracking (Premium)
 - 💳 Stripe integration for subscription management
 - 🔐 Supabase authentication and database
+
+## Pages
+
+- `/` - Landing page for new visitors
+- `/dashboard` - Main application dashboard (authenticated users)
+- `/chat` - AI chat interface
+- `/upgrade-success` - Subscription upgrade confirmation
 
 ## Getting Started
 
