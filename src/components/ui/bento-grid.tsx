@@ -9,6 +9,8 @@ import {
   IconTableColumn,
 } from "@tabler/icons-react";
 import { motion } from "framer-motion";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { Button } from "@/components/ui/button";
 
 export function BentoGridThirdDemo() {
   return (
@@ -71,15 +73,46 @@ const SkeletonTwo = () => {
 const SkeletonThree = () => {
   return (
     <motion.div
-      className="flex flex-col gap-2 p-4"
+      className="flex flex-col p-4 h-full"
       whileHover={{ scale: 1.01 }}
     >
-      <div className="h-3 w-[90%] bg-gray-100 rounded" />
-      <div className="h-3 w-[80%] bg-gray-100 rounded" />
-      <div className="h-3 w-[60%] bg-gray-100 rounded" />
-      <div className="flex items-center gap-2 mt-2">
-        <div className="h-2 w-2 bg-green-500 rounded-full" />
-        <div className="h-3 w-20 bg-gray-100 rounded" />
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <div className="h-2 w-2 bg-green-500 rounded-full" />
+          <div className="text-xs font-medium text-gray-600">users_table</div>
+        </div>
+        <div className="text-xs font-medium px-2 py-1 bg-green-500 text-white rounded-md">
+          Supabase
+        </div>
+      </div>
+
+      <div className="border rounded-lg overflow-hidden flex-1">
+        <div className="grid grid-cols-4 gap-1 bg-gray-50 p-1.5 border-b text-[10px]">
+          {['id', 'user', 'role', 'status'].map((header) => (
+            <div key={header} className="text-gray-500 font-medium">
+              {header}
+            </div>
+          ))}
+        </div>
+
+        {[...Array(2)].map((_, i) => (
+          <div 
+            key={i} 
+            className="grid grid-cols-4 gap-1 p-1.5 border-b last:border-0 bg-white"
+          >
+            <div className="h-1.5 bg-gray-100 rounded w-6" />
+            <div className="h-1.5 bg-gray-100 rounded w-10" />
+            <div className="h-1.5 bg-gray-100 rounded w-8" />
+            <div className="h-1.5 bg-green-100 rounded w-10" />
+          </div>
+        ))}
+      </div>
+
+      <div className="flex items-center gap-1.5 mt-2">
+        <div className="h-1.5 w-1.5 bg-green-500 rounded-full" />
+        <div className="text-[10px] text-gray-500">
+          Row Level Security enabled
+        </div>
       </div>
     </motion.div>
   );

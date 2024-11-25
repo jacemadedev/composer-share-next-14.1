@@ -15,13 +15,14 @@ export function NavBar({ onAuthClick }: NavBarProps) {
           <Button 
             variant="ghost" 
             size="sm"
-            className="hidden md:inline-flex"
+            className="hidden md:inline-flex text-blue-600 hover:text-blue-700 hover:bg-blue-50"
             onClick={onAuthClick}
           >
             Sign in
           </Button>
           <Button 
             size="sm"
+            className="bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700"
             onClick={onAuthClick}
           >
             Get started

@@ -42,11 +42,17 @@ export function BentoGridItem({
   return (
     <div
       className={cn(
-        "row-span-1 rounded-xl group/bento hover:shadow-xl transition duration-200 shadow-input dark:shadow-none p-4 dark:bg-black dark:border-white/[0.2] bg-white border-[1px] border-neutral-200 justify-between flex flex-col space-y-4",
+        "row-span-1 rounded-xl group/bento hover:shadow-xl transition duration-200",
+        "bg-white border-[1px] border-gray-200",
+        "dark:shadow-none dark:bg-black dark:border-white/[0.2]",
+        "justify-between flex flex-col space-y-4",
+        "p-6",
         className
       )}
     >
-      {header}
+      <div className="flex-1">
+        {header}
+      </div>
       <div className="group-hover/bento:translate-x-2 transition duration-200">
         {icon && <div className="mb-2">{icon}</div>}
         {title && (
