@@ -77,8 +77,10 @@ export default function LandingPage() {
             {LEFT_FEATURES.map((feature, index) => (
               <FeatureCard 
                 key={index} 
-                {...feature} 
-                position="left"
+                icon={feature.icon}
+                title={feature.title}
+                description={feature.description}
+                index={index}
               />
             ))}
           </div>
@@ -92,8 +94,10 @@ export default function LandingPage() {
               {[...LEFT_FEATURES, ...RIGHT_FEATURES].map((feature, index) => (
                 <FeatureCard 
                   key={index} 
-                  {...feature} 
-                  position="center"
+                  icon={feature.icon}
+                  title={feature.title}
+                  description={feature.description}
+                  index={index}
                 />
               ))}
             </div>
@@ -104,8 +108,10 @@ export default function LandingPage() {
             {RIGHT_FEATURES.map((feature, index) => (
               <FeatureCard 
                 key={index} 
-                {...feature} 
-                position="right"
+                icon={feature.icon}
+                title={feature.title}
+                description={feature.description}
+                index={index + LEFT_FEATURES.length}
               />
             ))}
           </div>

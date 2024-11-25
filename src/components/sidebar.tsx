@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import { Home, BookOpen, Users, Clock, Settings, LogOut, CreditCard, ChevronRight, User, Menu, Crown } from 'lucide-react'
+import { Home, BookOpen, MessageSquare, Clock, Settings, LogOut, CreditCard, ChevronRight, User, Menu, Crown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,6 +17,7 @@ import { Badge } from '@/components/ui/badge'
 import { ProfileModal } from './profile-modal'
 import { SettingsModal } from './settings-modal'
 import { useAuth } from '@/contexts/AuthContext'
+import { CancelSubscriptionModal } from './cancel-subscription-modal'
 
 type NavItem = {
   icon: React.ElementType;
@@ -28,7 +29,7 @@ type NavItem = {
 const navItems: NavItem[] = [
   { icon: Home, label: 'Dashboard', page: 'dashboard', isPremium: false },
   { icon: BookOpen, label: 'Starter Kits', page: 'repos', isPremium: true },
-  { icon: Users, label: 'Collaborators', page: 'collaborators', isPremium: true },
+  { icon: MessageSquare, label: 'Discord', page: 'discord', isPremium: true },
   { icon: Clock, label: 'History', page: 'history', isPremium: true },
 ]
 
@@ -61,6 +62,7 @@ export default function Sidebar({
   const [showProfileModal, setShowProfileModal] = useState(false)
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [showCancelModal, setShowCancelModal] = useState(false)
 
   const { resetAuth } = useAuth()
 
@@ -217,9 +219,10 @@ export default function Sidebar({
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="w-full justify-center p-2">
-                    <Avatar className="w-8 h-8">
-                      <AvatarImage src="https://github.com/shadcn.png" alt="@shadcn" />
-                      <AvatarFallback>{user?.user_metadata?.name?.charAt(0) || 'U'}</AvatarFallback>
+                    <Avatar className="w-8 h-8 bg-blue-100">
+                      <AvatarFallback className="bg-blue-100 text-blue-700">
+                        {user?.user_metadata?.name?.charAt(0)?.toUpperCase() || 'U'}
+                      </AvatarFallback>
                     </Avatar>
                     {!isCollapsed && (
                       <>
@@ -237,14 +240,14 @@ export default function Sidebar({
                     <span>Profile</span>
                   </DropdownMenuItem>
                   {plan === 'premium' && (
-                    <DropdownMenuItem onSelect={() => window.open('https://billing.stripe.com', '_blank')}>
+                    <DropdownMenuItem onSelect={() => setShowCancelModal(true)} className="text-red-600 focus:text-red-600">
                       <CreditCard className="mr-2 h-4 w-4" />
-                      <span>Billing</span>
+                      <span>Cancel Plan</span>
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuItem onSelect={() => setShowSettingsModal(true)}>
                     <Settings className="mr-2 h-4 w-4" />
-                    <span>Settings</span>
+                    <span>API Settings</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onSelect={handleSignOut}>
@@ -285,6 +288,11 @@ export default function Sidebar({
           onUpgrade={() => setIsUpgradeModalOpen(true)}
         />
       )}
+      <CancelSubscriptionModal 
+        isOpen={showCancelModal}
+        onClose={() => setShowCancelModal(false)}
+        userId={user?.id || ''}
+      />
     </>
   )
 }

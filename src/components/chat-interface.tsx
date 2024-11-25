@@ -52,6 +52,7 @@ export default function ChatInterface({
   const [messages, setMessages] = useState<Message[]>(
     initialConversation?.messages || []
   )
+  const [isTyping, setIsTyping] = useState(false)
 
   const createNewConversation = useCallback((msgs: Message[]): Conversation => ({
     id: initialConversation?.id || generateUUID(),
@@ -200,10 +201,10 @@ export default function ChatInterface({
     }
 
     try {
-      // Modify system prompt to handle errors better
+      // Modify system prompt to focus on debugging
       const systemPrompt = errorContext 
-        ? 'You are a debugging assistant. When analyzing errors, provide clear explanations and potential solutions. Focus on the specific error context provided.'
-        : 'You are a helpful assistant for a Git repository management tool.'
+        ? 'You are an expert debugging assistant. When analyzing errors, provide clear step-by-step explanations and practical solutions. Focus on the specific error context provided and suggest best practices to prevent similar issues.'
+        : 'You are an AI debugging assistant focused on helping developers understand and fix code issues. Provide clear explanations and actionable solutions.'
 
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -224,7 +225,10 @@ export default function ChatInterface({
                   error: msg.errorContext.errorType,
                   file: msg.errorContext.filePath,
                   line: msg.errorContext.lineNumber,
-                  stack: msg.errorContext.stackTrace
+                  stack: msg.errorContext.stackTrace,
+                  // Add additional debugging context
+                  severity: msg.errorContext.errorType.includes('Error') ? 'error' : 'warning',
+                  timestamp: new Date().toISOString()
                 }
               })
             })),
@@ -402,23 +406,75 @@ export default function ChatInterface({
     )
   }
 
+  // Debounced input handler
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    // Use requestAnimationFrame to defer state update
+    requestAnimationFrame(() => {
+      setInput(e.target.value)
+    })
+  }, [])
+
+  // Optimized key press handler
+  const handleKeyPress = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      if (!isTyping) {
+        setIsTyping(true)
+        requestAnimationFrame(() => {
+          handleSend()
+          setIsTyping(false)
+        })
+      }
+    }
+  }, [isTyping, handleSend])
+
   if (apiKey === null) {
     return (
-      <Card className="w-full h-screen">
-        <CardContent className="p-6 text-center">
-          <h2 className="text-xl font-semibold mb-4">OpenAI API Key Required</h2>
-          <p className="text-gray-600 mb-6">
-            Please configure your OpenAI API key in settings to use the chat feature.
-          </p>
-          <Button 
-            onClick={() => setShowSettings(true)}
-            className="inline-flex items-center"
-          >
-            <Settings className="mr-2 h-4 w-4" />
-            Configure API Key
-          </Button>
-        </CardContent>
-      </Card>
+      <>
+        <div className="flex items-center justify-center min-h-screen bg-gray-50">
+          <div className="max-w-md w-full mx-4">
+            <Card className="shadow-lg">
+              <CardContent className="p-8 text-center">
+                <div className="mb-6">
+                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Settings className="w-8 h-8 text-blue-600" />
+                  </div>
+                  <h2 className="text-2xl font-semibold text-gray-900 mb-2">OpenAI API Key Required</h2>
+                  <p className="text-gray-600 mb-6">
+                    Please configure your OpenAI API key to start using the chat feature.
+                  </p>
+                </div>
+                
+                <div className="space-y-4">
+                  <Button 
+                    onClick={() => setShowSettings(true)}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                    size="lg"
+                  >
+                    <Settings className="mr-2 h-4 w-4" />
+                    Configure API Key
+                  </Button>
+                  
+                  <Button 
+                    variant="outline"
+                    onClick={() => router.push('/dashboard')}
+                    className="w-full"
+                    size="lg"
+                  >
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Back to Dashboard
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        <SettingsModal 
+          isOpen={showSettings} 
+          onClose={handleSettingsClose} 
+        />
+      </>
     )
   }
 
@@ -463,14 +519,16 @@ export default function ChatInterface({
           <div className="flex items-center space-x-2 pt-4 border-t">
             <Input
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={handleInputChange}
+              onKeyPress={handleKeyPress}
               placeholder="Type your message..."
               className="text-sm md:text-base"
-              onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+              aria-label="Chat message input"
             />
             <Button 
-              onClick={() => handleSend()}
+              onClick={() => !isTyping && handleSend()}
               className="flex-shrink-0 bg-blue-500 hover:bg-blue-600 text-white"
+              disabled={isTyping}
             >
               <Send className="h-4 w-4 md:h-5 md:w-5" />
             </Button>

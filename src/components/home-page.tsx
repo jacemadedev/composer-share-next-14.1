@@ -5,7 +5,7 @@ import Sidebar from '@/components/sidebar'
 import SearchBar from '@/components/search-bar'
 import SuggestedTopics from '@/components/suggested-topics'
 import ReposPage from '@/components/repos-page'
-import CollaboratorsPage from '@/components/collaborators-page'
+import DiscordPage from '@/components/discord-page'
 import HistoryPage from '@/components/history-page'
 import ChatInterface from '@/components/chat-interface'
 import { AuthModal } from '@/components/auth-modal'
@@ -74,7 +74,8 @@ export default function HomePage() {
     setCurrentConversation(newConversation)
   }
 
-  const handleSearch = (query: string) => {
+  const handleSearch = async (query: string) => {
+    console.log('Searching:', query)
     router.push(`/chat?q=${encodeURIComponent(query)}`)
   }
 
@@ -94,9 +95,9 @@ export default function HomePage() {
             </Button>
           </div>
         )
-      case 'collaborators':
+      case 'discord':
         return isPremiumUser ? (
-          <CollaboratorsPage />
+          <DiscordPage />
         ) : (
           <div className="flex flex-col items-center justify-center min-h-[calc(100vh-4rem)]">
             <h2 className="text-2xl font-bold mb-4">Premium Feature</h2>
@@ -141,12 +142,15 @@ export default function HomePage() {
                 </div>
               )}
               <h1 className="text-4xl font-bold text-center text-gray-900">
-                GitAssist: Your Repo Assistant
+                AI Debug Assistant
               </h1>
-              <SearchBar searchCallback={handleSearch} />
+              <SearchBar 
+                onSearch={handleSearch}
+                placeholder="Paste your error message or describe the issue..."
+              />
               <div>
                 <h2 className="text-2xl font-semibold mb-4">
-                  Suggested Actions
+                  Common Debugging Actions
                 </h2>
                 <SuggestedTopics onTopicSelect={handleTopicSelect} />
               </div>
