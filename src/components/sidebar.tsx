@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Home, BookOpen, Users, Clock, Settings, LogOut, CreditCard, ChevronRight, User, Menu, Crown } from 'lucide-react'
+import { Home, BookOpen, MessageSquare, Clock, Settings, LogOut, CreditCard, ChevronRight, User, Menu, Crown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
@@ -28,7 +28,7 @@ type NavItem = {
 const navItems: NavItem[] = [
   { icon: Home, label: 'Dashboard', page: 'dashboard', isPremium: false },
   { icon: BookOpen, label: 'Starter Kits', page: 'repos', isPremium: true },
-  { icon: Users, label: 'Collaborators', page: 'collaborators', isPremium: true },
+  { icon: MessageSquare, label: 'Discord', page: 'discord', isPremium: true },
   { icon: Clock, label: 'History', page: 'history', isPremium: true },
 ]
 

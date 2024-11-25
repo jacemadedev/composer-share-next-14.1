@@ -5,7 +5,7 @@ import Sidebar from '@/components/sidebar'
 import SearchBar from '@/components/search-bar'
 import SuggestedTopics from '@/components/suggested-topics'
 import ReposPage from '@/components/repos-page'
-import CollaboratorsPage from '@/components/collaborators-page'
+import DiscordPage from '@/components/discord-page'
 import HistoryPage from '@/components/history-page'
 import ChatInterface from '@/components/chat-interface'
 import { AuthModal } from '@/components/auth-modal'
@@ -94,9 +94,9 @@ export default function HomePage() {
             </Button>
           </div>
         )
-      case 'collaborators':
+      case 'discord':
         return isPremiumUser ? (
-          <CollaboratorsPage />
+          <DiscordPage />
         ) : (
           <div className="flex flex-col items-center justify-center min-h-[calc(100vh-4rem)]">
             <h2 className="text-2xl font-bold mb-4">Premium Feature</h2>

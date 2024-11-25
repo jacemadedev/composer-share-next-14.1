@@ -43,10 +43,10 @@ export function HeroSection({ onAuthClick }: HeroSectionProps) {
       </div>
 
       <h1 className="text-5xl md:text-7xl font-bold mb-6 tracking-tight leading-tight">
-        The easiest way to<br />develop in bolt
+        The easiest way to<br />develop in bolt.new
       </h1>
       <p className="text-xl text-gray-600 mb-6">
-        #1 Composers.dev & Cursor Boilerplates
+        #1 Bolt.new & Cursor Boilerplates
       </p>
 
       {/* Tech Stack Badges */}
