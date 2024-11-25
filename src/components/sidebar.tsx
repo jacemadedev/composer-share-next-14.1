@@ -17,6 +17,7 @@ import { Badge } from '@/components/ui/badge'
 import { ProfileModal } from './profile-modal'
 import { SettingsModal } from './settings-modal'
 import { useAuth } from '@/contexts/AuthContext'
+import { CancelSubscriptionModal } from './cancel-subscription-modal'
 
 type NavItem = {
   icon: React.ElementType;
@@ -61,6 +62,7 @@ export default function Sidebar({
   const [showProfileModal, setShowProfileModal] = useState(false)
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [showCancelModal, setShowCancelModal] = useState(false)
 
   const { resetAuth } = useAuth()
 
@@ -237,14 +239,14 @@ export default function Sidebar({
                     <span>Profile</span>
                   </DropdownMenuItem>
                   {plan === 'premium' && (
-                    <DropdownMenuItem onSelect={() => window.open('https://billing.stripe.com', '_blank')}>
+                    <DropdownMenuItem onSelect={() => setShowCancelModal(true)} className="text-red-600 focus:text-red-600">
                       <CreditCard className="mr-2 h-4 w-4" />
-                      <span>Billing</span>
+                      <span>Cancel Plan</span>
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuItem onSelect={() => setShowSettingsModal(true)}>
                     <Settings className="mr-2 h-4 w-4" />
-                    <span>Settings</span>
+                    <span>API Settings</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onSelect={handleSignOut}>
@@ -285,6 +287,11 @@ export default function Sidebar({
           onUpgrade={() => setIsUpgradeModalOpen(true)}
         />
       )}
+      <CancelSubscriptionModal 
+        isOpen={showCancelModal}
+        onClose={() => setShowCancelModal(false)}
+        userId={user?.id || ''}
+      />
     </>
   )
 }
