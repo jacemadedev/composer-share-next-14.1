@@ -194,11 +194,6 @@ export default function ChatInterface({
       onUpdateConversation(updatedConversation)
     }
 
-    // Update URL with conversation ID if it's a new conversation
-    if (!initialConversation?.id) {
-      window.history.replaceState({}, '', `/chat?id=${updatedConversation.id}`)
-    }
-
     try {
       // Modify system prompt to handle errors better
       const systemPrompt = errorContext 
@@ -273,7 +268,7 @@ export default function ChatInterface({
     }
 
     setInput('')
-  }, [input, apiKey, messages, onUpdateConversation, saveChatToHistory, createNewConversation, initialConversation])
+  }, [input, apiKey, messages, onUpdateConversation, saveChatToHistory, createNewConversation])
 
   useEffect(() => {
     const handleInitialMessage = async () => {
