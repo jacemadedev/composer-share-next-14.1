@@ -141,12 +141,15 @@ export default function HomePage() {
                 </div>
               )}
               <h1 className="text-4xl font-bold text-center text-gray-900">
-                GitAssist: Your Repo Assistant
+                AI Debug Assistant
               </h1>
-              <SearchBar searchCallback={handleSearch} />
+              <SearchBar 
+                searchCallback={handleSearch} 
+                placeholder="Paste your error message or describe the issue..."
+              />
               <div>
                 <h2 className="text-2xl font-semibold mb-4">
-                  Suggested Actions
+                  Common Debugging Actions
                 </h2>
                 <SuggestedTopics onTopicSelect={handleTopicSelect} />
               </div>

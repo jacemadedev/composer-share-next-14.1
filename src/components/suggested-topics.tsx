@@ -9,10 +9,26 @@ interface SuggestedTopicsProps {
 export default function SuggestedTopics({ onTopicSelect }: SuggestedTopicsProps) {
   const router = useRouter()
   const topics = [
-    { icon: GitBranch, label: 'Analyze my repo structure' },
-    { icon: GitPullRequest, label: 'Review my latest PR' },
-    { icon: Search, label: 'Find code in my repos' },
-    { icon: BookOpen, label: 'Explain a file in my repo' },
+    { 
+      icon: GitBranch, 
+      label: "Debug my error message",
+      description: "Get help understanding and fixing error messages"
+    },
+    { 
+      icon: GitPullRequest, 
+      label: "Review my code for bugs",
+      description: "Analyze code for potential issues and improvements" 
+    },
+    { 
+      icon: Search, 
+      label: "Optimize performance",
+      description: "Find and fix performance bottlenecks"
+    },
+    { 
+      icon: BookOpen, 
+      label: "Explain error patterns",
+      description: "Learn about common error patterns and solutions"
+    },
   ]
 
   const handleTopicClick = (topic: string) => {
@@ -30,7 +46,14 @@ export default function SuggestedTopics({ onTopicSelect }: SuggestedTopicsProps)
           onClick={() => handleTopicClick(topic.label)}
         >
           <topic.icon className="h-5 w-5 md:h-6 md:w-6 mr-3 md:mr-4 flex-shrink-0" />
-          <span className="text-gray-700 text-sm md:text-base">{topic.label}</span>
+          <div className="flex flex-col items-start">
+            <span className="text-gray-900 text-sm md:text-base font-medium">
+              {topic.label}
+            </span>
+            <span className="text-gray-500 text-xs md:text-sm">
+              {topic.description}
+            </span>
+          </div>
         </Button>
       ))}
     </div>

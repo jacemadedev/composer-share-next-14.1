@@ -7,9 +7,10 @@ import { Button } from '@/components/ui/button'
 
 interface SearchBarProps {
   searchCallback?: (query: string) => void;
+  placeholder?: string;
 }
 
-export default function SearchBar({ searchCallback }: SearchBarProps) {
+export default function SearchBar({ searchCallback, placeholder = "Search..." }: SearchBarProps) {
   const [searchQuery, setSearchQuery] = useState('')
 
   const handleSearch = (e: React.FormEvent) => {
@@ -25,7 +26,7 @@ export default function SearchBar({ searchCallback }: SearchBarProps) {
       <Input 
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
-        placeholder="Search starter kits..." 
+        placeholder={placeholder}
         className="pl-10 pr-20 py-4 md:py-6 text-base md:text-lg rounded-full shadow-sm focus:ring-2 focus:ring-blue-500 w-full"
       />
       <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 md:h-5 md:w-5" />

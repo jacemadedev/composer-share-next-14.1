@@ -200,10 +200,10 @@ export default function ChatInterface({
     }
 
     try {
-      // Modify system prompt to handle errors better
+      // Modify system prompt to focus on debugging
       const systemPrompt = errorContext 
-        ? 'You are a debugging assistant. When analyzing errors, provide clear explanations and potential solutions. Focus on the specific error context provided.'
-        : 'You are a helpful assistant for a Git repository management tool.'
+        ? 'You are an expert debugging assistant. When analyzing errors, provide clear step-by-step explanations and practical solutions. Focus on the specific error context provided and suggest best practices to prevent similar issues.'
+        : 'You are an AI debugging assistant focused on helping developers understand and fix code issues. Provide clear explanations and actionable solutions.'
 
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -224,7 +224,10 @@ export default function ChatInterface({
                   error: msg.errorContext.errorType,
                   file: msg.errorContext.filePath,
                   line: msg.errorContext.lineNumber,
-                  stack: msg.errorContext.stackTrace
+                  stack: msg.errorContext.stackTrace,
+                  // Add additional debugging context
+                  severity: msg.errorContext.errorType.includes('Error') ? 'error' : 'warning',
+                  timestamp: new Date().toISOString()
                 }
               })
             })),
