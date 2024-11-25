@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase-admin'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2024-11-20.acacia',
@@ -31,7 +31,7 @@ export async function GET(req: Request) {
       const subscription = await stripe.subscriptions.retrieve(session.subscription as string)
 
       if (userId) {
-        const { error } = await supabase
+        const { error } = await supabaseAdmin!
           .from('subscriptions')
           .upsert({ 
             user_id: userId,

@@ -26,10 +26,35 @@ const STARTER_KITS = [
 const shimmer = "before:absolute before:inset-0 before:-translate-x-full before:animate-[shimmer_2s_infinite] before:bg-gradient-to-r before:from-transparent before:via-white/10 before:to-transparent"
 
 export function StarterKits({ onAuthClick }: StarterKitsProps) {
+  const getRotationClass = (index: number) => {
+    // Create a more varied pattern of rotations
+    const rotations = [
+      '-rotate-2 hover:rotate-0', // First card tilts left
+      'rotate-3 hover:rotate-0',  // Second card tilts right more
+      '-rotate-1 hover:rotate-1', // Third card tilts left slightly
+      'rotate-2 hover:-rotate-1', // Fourth card tilts right
+      '-rotate-3 hover:rotate-1', // Fifth card tilts left more
+      'rotate-1 hover:-rotate-1', // Sixth card tilts right slightly
+    ];
+    
+    // Add some vertical offset to enhance the falling effect
+    const translateY = [
+      '-translate-y-2',
+      'translate-y-1',
+      '-translate-y-1',
+      'translate-y-2',
+      '-translate-y-3',
+      'translate-y-0',
+    ];
+    
+    const index_mod = index % rotations.length;
+    return `${rotations[index_mod]} ${translateY[index_mod]}`;
+  };
+
   return (
     <div className="bg-[#0A0A0B]">
       <div className="container mx-auto py-24 px-4">
-        <div className="max-w-3xl mx-auto text-center mb-16">
+        <div className="max-w-4xl mx-auto text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-bold mb-4 text-white">
             Composer Kits
           </h2>
@@ -45,12 +70,17 @@ export function StarterKits({ onAuthClick }: StarterKitsProps) {
           </Button>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+        <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
           {/* Real starter kits */}
           {STARTER_KITS.map((kit, index) => (
             <div
               key={index}
-              className="group rounded-xl border border-[#1F1F21] bg-[#111113] overflow-hidden"
+              className={`
+                group rounded-xl border border-[#1F1F21] bg-[#111113] overflow-hidden
+                transform transition-all duration-500
+                hover:scale-[1.02] hover:-translate-y-1
+                ${getRotationClass(index)}
+              `}
             >
               <div className="aspect-video relative overflow-hidden bg-black">
                 <iframe
@@ -96,7 +126,13 @@ export function StarterKits({ onAuthClick }: StarterKitsProps) {
           {[...Array(4)].map((_, index) => (
             <div
               key={`placeholder-${index}`}
-              className={`group rounded-xl border border-[#1F1F21] bg-[#111113] overflow-hidden relative ${shimmer}`}
+              className={`
+                group rounded-xl border border-[#1F1F21] bg-[#111113] overflow-hidden relative
+                transform transition-all duration-500
+                hover:scale-[1.02] hover:-translate-y-1
+                ${getRotationClass(index + STARTER_KITS.length)}
+                ${shimmer}
+              `}
             >
               <div className="aspect-video bg-[#1F1F21]/50 relative">
                 <div className="absolute inset-0 flex items-center justify-center">
