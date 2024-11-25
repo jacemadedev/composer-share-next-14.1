@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Home, BookOpen, MessageSquare, Clock, Settings, LogOut, CreditCard, ChevronRight, User, Menu, Crown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   DropdownMenu,
