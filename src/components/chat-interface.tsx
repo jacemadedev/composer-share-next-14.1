@@ -407,51 +407,21 @@ export default function ChatInterface({
 
   if (apiKey === null) {
     return (
-      <>
-        <div className="flex items-center justify-center min-h-screen bg-gray-50">
-          <div className="max-w-md w-full mx-4">
-            <Card className="shadow-lg">
-              <CardContent className="p-8 text-center">
-                <div className="mb-6">
-                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Settings className="w-8 h-8 text-blue-600" />
-                  </div>
-                  <h2 className="text-2xl font-semibold text-gray-900 mb-2">OpenAI API Key Required</h2>
-                  <p className="text-gray-600 mb-6">
-                    Please configure your OpenAI API key to start using the chat feature.
-                  </p>
-                </div>
-                
-                <div className="space-y-4">
-                  <Button 
-                    onClick={() => setShowSettings(true)}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                    size="lg"
-                  >
-                    <Settings className="mr-2 h-4 w-4" />
-                    Configure API Key
-                  </Button>
-                  
-                  <Button 
-                    variant="outline"
-                    onClick={() => router.push('/dashboard')}
-                    className="w-full"
-                    size="lg"
-                  >
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    Back to Dashboard
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-
-        <SettingsModal 
-          isOpen={showSettings} 
-          onClose={handleSettingsClose} 
-        />
-      </>
+      <Card className="w-full h-screen">
+        <CardContent className="p-6 text-center">
+          <h2 className="text-xl font-semibold mb-4">OpenAI API Key Required</h2>
+          <p className="text-gray-600 mb-6">
+            Please configure your OpenAI API key in settings to use the chat feature.
+          </p>
+          <Button 
+            onClick={() => setShowSettings(true)}
+            className="inline-flex items-center"
+          >
+            <Settings className="mr-2 h-4 w-4" />
+            Configure API Key
+          </Button>
+        </CardContent>
+      </Card>
     )
   }
 
