@@ -11,7 +11,7 @@ CREATE TABLE profiles (
 
 -- Create subscriptions table
 CREATE TABLE subscriptions (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  id TEXT PRIMARY KEY,
   user_id UUID REFERENCES auth.users NOT NULL,
   customer_id TEXT,
   status TEXT NOT NULL,
@@ -58,15 +58,15 @@ CREATE POLICY "Users can update own profile."
 
 CREATE POLICY "Users can view own subscriptions."
   ON subscriptions FOR SELECT
-  USING ( auth.uid() = user_id );
+  USING (auth.role() = 'authenticated' AND auth.uid() = user_id);
 
 CREATE POLICY "Users can insert own subscriptions."
   ON subscriptions FOR INSERT
-  WITH CHECK ( auth.uid() = user_id );
+  WITH CHECK (auth.role() = 'authenticated' AND auth.uid() = user_id);
 
 CREATE POLICY "Users can update own subscriptions."
   ON subscriptions FOR UPDATE
-  USING ( auth.uid() = user_id );
+  USING (auth.role() = 'authenticated' AND auth.uid() = user_id);
 
 CREATE POLICY "Users can view own settings."
   ON user_settings FOR SELECT
@@ -154,4 +154,9 @@ EXECUTE FUNCTION public.handle_new_user();
 
 -- Enable the trigger explicitly
 ALTER TABLE auth.users ENABLE TRIGGER on_auth_user_created;
+
+-- Add policy for service role
+CREATE POLICY "Service role can manage all subscriptions"
+  ON subscriptions
+  USING (auth.role() = 'service_role');
 

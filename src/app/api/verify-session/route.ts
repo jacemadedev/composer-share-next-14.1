@@ -34,6 +34,7 @@ export async function GET(req: Request) {
         const { error } = await supabase
           .from('subscriptions')
           .upsert({ 
+            id: subscription.id,
             user_id: userId,
             status: subscription.status,
             price_id: subscription.items.data[0].price.id,
