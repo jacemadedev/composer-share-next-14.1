@@ -39,7 +39,6 @@ export async function POST(req: Request) {
         const { error: subscriptionError } = await supabaseAdmin!
           .from('subscriptions')
           .upsert({
-            id: subscription.id,
             user_id: userId,
             customer_id: customerId,
             status,
