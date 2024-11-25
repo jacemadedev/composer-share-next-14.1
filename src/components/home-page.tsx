@@ -24,7 +24,7 @@ type Conversation = {
 }
 
 export default function HomePage() {
-  const [currentPage, setCurrentPage] = useState('home')
+  const [currentPage, setCurrentPage] = useState('dashboard')
   const [showChat, setShowChat] = useState(false)
   const [initialMessage, setInitialMessage] = useState('')
   const [conversations, setConversations] = useState<Conversation[]>([])

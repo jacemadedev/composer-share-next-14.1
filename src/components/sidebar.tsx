@@ -26,7 +26,7 @@ type NavItem = {
 }
 
 const navItems: NavItem[] = [
-  { icon: Home, label: 'Home', page: 'home', isPremium: false },
+  { icon: Home, label: 'Dashboard', page: 'dashboard', isPremium: false },
   { icon: BookOpen, label: 'Starter Kits', page: 'repos', isPremium: true },
   { icon: Users, label: 'Collaborators', page: 'collaborators', isPremium: true },
   { icon: Clock, label: 'History', page: 'history', isPremium: true },
