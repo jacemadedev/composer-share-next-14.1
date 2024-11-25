@@ -74,8 +74,7 @@ export default function HomePage() {
     setCurrentConversation(newConversation)
   }
 
-  const handleSearch = async (query: string) => {
-    console.log('Searching:', query)
+  const handleSearch = (query: string) => {
     router.push(`/chat?q=${encodeURIComponent(query)}`)
   }
 
@@ -145,7 +144,7 @@ export default function HomePage() {
                 AI Debug Assistant
               </h1>
               <SearchBar 
-                onSearch={handleSearch}
+                searchCallback={handleSearch} 
                 placeholder="Paste your error message or describe the issue..."
               />
               <div>

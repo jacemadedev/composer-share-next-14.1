@@ -52,7 +52,6 @@ export default function ChatInterface({
   const [messages, setMessages] = useState<Message[]>(
     initialConversation?.messages || []
   )
-  const [isTyping, setIsTyping] = useState(false)
 
   const createNewConversation = useCallback((msgs: Message[]): Conversation => ({
     id: initialConversation?.id || generateUUID(),
@@ -406,28 +405,6 @@ export default function ChatInterface({
     )
   }
 
-  // Debounced input handler
-  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    // Use requestAnimationFrame to defer state update
-    requestAnimationFrame(() => {
-      setInput(e.target.value)
-    })
-  }, [])
-
-  // Optimized key press handler
-  const handleKeyPress = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      if (!isTyping) {
-        setIsTyping(true)
-        requestAnimationFrame(() => {
-          handleSend()
-          setIsTyping(false)
-        })
-      }
-    }
-  }, [isTyping, handleSend])
-
   if (apiKey === null) {
     return (
       <>
@@ -519,16 +496,14 @@ export default function ChatInterface({
           <div className="flex items-center space-x-2 pt-4 border-t">
             <Input
               value={input}
-              onChange={handleInputChange}
-              onKeyPress={handleKeyPress}
+              onChange={(e) => setInput(e.target.value)}
               placeholder="Type your message..."
               className="text-sm md:text-base"
-              aria-label="Chat message input"
+              onKeyPress={(e) => e.key === 'Enter' && handleSend()}
             />
             <Button 
-              onClick={() => !isTyping && handleSend()}
+              onClick={() => handleSend()}
               className="flex-shrink-0 bg-blue-500 hover:bg-blue-600 text-white"
-              disabled={isTyping}
             >
               <Send className="h-4 w-4 md:h-5 md:w-5" />
             </Button>
