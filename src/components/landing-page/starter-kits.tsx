@@ -29,7 +29,7 @@ export function StarterKits({ onAuthClick }: StarterKitsProps) {
   return (
     <div className="bg-[#0A0A0B]">
       <div className="container mx-auto py-24 px-4">
-        <div className="max-w-3xl mx-auto text-center mb-16">
+        <div className="max-w-4xl mx-auto text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-bold mb-4 text-white">
             Composer Kits
           </h2>
@@ -45,7 +45,7 @@ export function StarterKits({ onAuthClick }: StarterKitsProps) {
           </Button>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+        <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
           {/* Real starter kits */}
           {STARTER_KITS.map((kit, index) => (
             <div
