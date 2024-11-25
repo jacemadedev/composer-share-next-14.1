@@ -220,9 +220,10 @@ export default function Sidebar({
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="w-full justify-center p-2">
-                    <Avatar className="w-8 h-8">
-                      <AvatarImage src="https://github.com/shadcn.png" alt="@shadcn" />
-                      <AvatarFallback>{user?.user_metadata?.name?.charAt(0) || 'U'}</AvatarFallback>
+                    <Avatar className="w-8 h-8 bg-blue-100">
+                      <AvatarFallback className="bg-blue-100 text-blue-700">
+                        {user?.user_metadata?.name?.charAt(0)?.toUpperCase() || 'U'}
+                      </AvatarFallback>
                     </Avatar>
                     {!isCollapsed && (
                       <>
