@@ -11,7 +11,7 @@ CREATE TABLE profiles (
 
 -- Create subscriptions table
 CREATE TABLE subscriptions (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  id TEXT DEFAULT NULL PRIMARY KEY,
   user_id UUID REFERENCES auth.users NOT NULL,
   customer_id TEXT,
   status TEXT NOT NULL,
@@ -56,17 +56,31 @@ CREATE POLICY "Users can update own profile."
   ON profiles FOR UPDATE
   USING ( auth.uid() = id );
 
-CREATE POLICY "Users can view own subscriptions."
-  ON subscriptions FOR SELECT
-  USING ( auth.uid() = user_id );
+-- First, drop all existing policies on the subscriptions table
+DROP POLICY IF EXISTS "Users can view own subscriptions" ON subscriptions;
+DROP POLICY IF EXISTS "Users can insert own subscriptions" ON subscriptions;
+DROP POLICY IF EXISTS "Users can update own subscriptions" ON subscriptions;
+DROP POLICY IF EXISTS "Enable all actions for service role" ON subscriptions;
+DROP POLICY IF EXISTS "Allow service role to insert subscriptions" ON subscriptions;
+DROP POLICY IF EXISTS "Allow service role to update subscriptions" ON subscriptions;
 
-CREATE POLICY "Users can insert own subscriptions."
-  ON subscriptions FOR INSERT
-  WITH CHECK ( auth.uid() = user_id );
+-- Then create a single comprehensive policy for the service role
+CREATE POLICY "Enable full access for service role"
+ON subscriptions
+USING (true)
+WITH CHECK (true);
 
-CREATE POLICY "Users can update own subscriptions."
-  ON subscriptions FOR UPDATE
-  USING ( auth.uid() = user_id );
+-- Create a read-only policy for authenticated users
+CREATE POLICY "Users can view own subscriptions"
+ON subscriptions FOR SELECT
+USING (auth.uid() = user_id);
+
+-- Grant necessary permissions
+GRANT ALL ON subscriptions TO service_role;
+GRANT SELECT ON subscriptions TO authenticated;
+
+-- Ensure RLS is enabled
+ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can view own settings."
   ON user_settings FOR SELECT

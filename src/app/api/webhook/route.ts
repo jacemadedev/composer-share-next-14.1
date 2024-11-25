@@ -35,7 +35,7 @@ export async function POST(req: Request) {
         const cancelAtPeriodEnd = subscription.cancel_at_period_end
         const priceId = subscription.items.data[0]?.price.id || ''
 
-        // Update subscription in database
+        // Update subscription in database using Stripe subscription ID
         const { error: subscriptionError } = await supabaseAdmin!
           .from('subscriptions')
           .upsert({
