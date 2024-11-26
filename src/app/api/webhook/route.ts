@@ -30,16 +30,33 @@ export async function POST(req: Request) {
       case 'customer.subscription.updated': {
         const subscription = event.data.object as Stripe.Subscription
         const customerId = subscription.customer as string
-        const userId = subscription.metadata.userId
+        
+        // Get the session to retrieve the client_reference_id (user_id)
+        const session = await stripe.checkout.sessions.list({
+          subscription: subscription.id,
+          limit: 1,
+        });
+        const userId = session.data[0]?.client_reference_id
+
+        if (!userId) {
+          throw new Error('No userId found in subscription metadata')
+        }
+
         const status = subscription.status
         const cancelAtPeriodEnd = subscription.cancel_at_period_end
         const priceId = subscription.items.data[0]?.price.id || ''
 
-        // Update subscription in database using the subscription ID from Stripe
+        console.log('Processing subscription:', {
+          subscriptionId: subscription.id,
+          userId,
+          status,
+        })
+
+        // Update subscription in database
         const { error: subscriptionError } = await supabaseAdmin!
           .from('subscriptions')
           .upsert({
-            id: subscription.id, // Use Stripe's subscription ID directly
+            id: subscription.id,
             user_id: userId,
             customer_id: customerId,
             status,
@@ -52,11 +69,14 @@ export async function POST(req: Request) {
             quantity: subscription.items.data[0]?.quantity || 1
           })
 
-        if (subscriptionError) throw subscriptionError
+        if (subscriptionError) {
+          console.error('Subscription update error:', subscriptionError)
+          throw subscriptionError
+        }
 
         // Update user settings based on subscription status
         if (status === 'active' && !cancelAtPeriodEnd) {
-          await supabaseAdmin!
+          const { error: settingsError } = await supabaseAdmin!
             .from('user_settings')
             .update({
               plan: 'premium',
@@ -64,16 +84,26 @@ export async function POST(req: Request) {
               updated_at: new Date().toISOString()
             })
             .eq('user_id', userId)
-        } else if (cancelAtPeriodEnd) {
-          // Don't change the plan yet, it will change when subscription actually ends
-          console.log('Subscription scheduled for cancellation at period end')
+
+          if (settingsError) {
+            console.error('Settings update error:', settingsError)
+            throw settingsError
+          }
         }
         break
       }
 
       case 'customer.subscription.deleted': {
         const subscription = event.data.object as Stripe.Subscription
-        const userId = subscription.metadata.userId
+        const session = await stripe.checkout.sessions.list({
+          subscription: subscription.id,
+          limit: 1,
+        });
+        const userId = session.data[0]?.client_reference_id
+
+        if (!userId) {
+          throw new Error('No userId found for deleted subscription')
+        }
 
         // Update user settings to free plan
         const { error: updateError } = await supabaseAdmin!
