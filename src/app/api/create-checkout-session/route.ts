@@ -23,6 +23,28 @@ export async function POST(req: Request) {
       console.warn('No email found for user:', userId)
     }
 
+    // Create or retrieve customer first
+    let customer: Stripe.Customer
+    const existingCustomers = await stripe.customers.list({
+      email: email,
+      limit: 1
+    })
+
+    if (existingCustomers.data.length > 0) {
+      customer = existingCustomers.data[0]
+      // Update metadata if needed
+      if (!customer.metadata.userId) {
+        customer = await stripe.customers.update(customer.id, {
+          metadata: { userId }
+        })
+      }
+    } else {
+      customer = await stripe.customers.create({
+        email: email,
+        metadata: { userId }
+      })
+    }
+
     const sessionConfig: Stripe.Checkout.SessionCreateParams = {
       mode: 'subscription',
       payment_method_types: ['card'],
@@ -35,13 +57,12 @@ export async function POST(req: Request) {
       success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/upgrade-success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/`,
       client_reference_id: userId,
-      metadata: {
-        userId: userId,
+      customer: customer.id,
+      subscription_data: {
+        metadata: {
+          userId: userId,
+        },
       },
-    }
-
-    if (email) {
-      sessionConfig.customer_email = email
     }
 
     const session = await stripe.checkout.sessions.create(sessionConfig)

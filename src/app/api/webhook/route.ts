@@ -9,7 +9,15 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function POST(req: Request) {
   const body = await req.text()
-  const signature = headers().get('stripe-signature')!
+  const signature = headers().get('stripe-signature')
+
+  if (!signature) {
+    console.error('Missing stripe-signature header')
+    return NextResponse.json(
+      { error: 'Missing stripe signature' },
+      { status: 400 }
+    )
+  }
 
   let event: Stripe.Event
 
@@ -21,7 +29,10 @@ export async function POST(req: Request) {
     )
   } catch (error) {
     console.error('Webhook signature verification failed:', error)
-    return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
+    return NextResponse.json(
+      { error: 'Invalid signature', details: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 400 }
+    )
   }
 
   try {
@@ -31,15 +42,15 @@ export async function POST(req: Request) {
         const subscription = event.data.object as Stripe.Subscription
         const customerId = subscription.customer as string
         
-        // Get the session to retrieve the client_reference_id (user_id)
-        const session = await stripe.checkout.sessions.list({
-          subscription: subscription.id,
-          limit: 1,
-        });
-        const userId = session.data[0]?.client_reference_id
+        const customerResponse = await stripe.customers.retrieve(customerId) as Stripe.Customer
+        const userId = customerResponse.metadata?.userId || subscription.metadata.userId
 
         if (!userId) {
-          throw new Error('No userId found in subscription metadata')
+          console.error('No userId found in customer or subscription metadata:', {
+            customerId,
+            subscriptionId: subscription.id
+          })
+          throw new Error('No userId found in metadata')
         }
 
         const status = subscription.status
@@ -50,9 +61,9 @@ export async function POST(req: Request) {
           subscriptionId: subscription.id,
           userId,
           status,
+          customerId
         })
 
-        // Update subscription in database
         const { error: subscriptionError } = await supabaseAdmin!
           .from('subscriptions')
           .upsert({
@@ -74,7 +85,6 @@ export async function POST(req: Request) {
           throw subscriptionError
         }
 
-        // Update user settings based on subscription status
         if (status === 'active' && !cancelAtPeriodEnd) {
           const { error: settingsError } = await supabaseAdmin!
             .from('user_settings')
@@ -95,17 +105,18 @@ export async function POST(req: Request) {
 
       case 'customer.subscription.deleted': {
         const subscription = event.data.object as Stripe.Subscription
-        const session = await stripe.checkout.sessions.list({
-          subscription: subscription.id,
-          limit: 1,
-        });
-        const userId = session.data[0]?.client_reference_id
+        const customerId = subscription.customer as string
+        const customerResponse = await stripe.customers.retrieve(customerId) as Stripe.Customer
+        const userId = customerResponse.metadata?.userId || subscription.metadata.userId
 
         if (!userId) {
-          throw new Error('No userId found for deleted subscription')
+          console.error('No userId found for deleted subscription:', {
+            customerId,
+            subscriptionId: subscription.id
+          })
+          throw new Error('No userId found in metadata')
         }
 
-        // Update user settings to free plan
         const { error: updateError } = await supabaseAdmin!
           .from('user_settings')
           .update({
@@ -124,7 +135,7 @@ export async function POST(req: Request) {
   } catch (error) {
     console.error('Webhook error:', error)
     return NextResponse.json(
-      { error: 'Webhook handler failed' },
+      { error: 'Webhook handler failed', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 400 }
     )
   }
