@@ -16,6 +16,7 @@ import ErrorScreen from '@/components/error-screen'
 import { Button } from '@/components/ui/button'
 import { UpgradePlanModal } from '@/components/upgrade-plan-modal'
 import { cn } from '@/lib/utils'
+import { WelcomeModal } from '@/components/welcome-modal'
 
 type Conversation = {
   id: string;
@@ -35,6 +36,7 @@ export default function HomePage() {
   const searchParams = useSearchParams()
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false)
   const router = useRouter()
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false)
 
   // Handle Stripe checkout return
   useEffect(() => {
@@ -62,6 +64,17 @@ export default function HomePage() {
     }
   }, [user, refreshSubscription])
 
+  useEffect(() => {
+    if (user && (!subscription || subscription.status !== 'active') && plan !== 'premium') {
+      const lastShown = localStorage.getItem('welcomeModalLastShown')
+      const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000 // 7 days in milliseconds
+      
+      if (!lastShown || Date.now() - parseInt(lastShown) > sevenDaysInMs) {
+        setShowWelcomeModal(true)
+      }
+    }
+  }, [user, subscription, plan])
+
   const handleTopicSelect = (topic: string) => {
     setShowChat(true)
     setInitialMessage(topic)
@@ -77,6 +90,11 @@ export default function HomePage() {
   const handleSearch = async (query: string) => {
     console.log('Searching:', query)
     router.push(`/chat?q=${encodeURIComponent(query)}`)
+  }
+
+  const handleWelcomeModalClose = () => {
+    setShowWelcomeModal(false)
+    localStorage.setItem('welcomeModalLastShown', Date.now().toString())
   }
 
   const renderPage = () => {
@@ -191,12 +209,22 @@ export default function HomePage() {
         onClose={() => setShowAuthModal(false)}
       />
       {isAuthenticated && (
-        <UpgradePlanModal
-          isOpen={isUpgradeModalOpen}
-          onClose={() => setIsUpgradeModalOpen(false)}
-          isAuthenticated={isAuthenticated}
-          userId={user?.id || ''}
-        />
+        <>
+          <UpgradePlanModal
+            isOpen={isUpgradeModalOpen}
+            onClose={() => setIsUpgradeModalOpen(false)}
+            isAuthenticated={isAuthenticated}
+            userId={user?.id || ''}
+          />
+          <WelcomeModal 
+            isOpen={showWelcomeModal}
+            onClose={handleWelcomeModalClose}
+            onUpgrade={() => {
+              handleWelcomeModalClose()
+              setIsUpgradeModalOpen(true)
+            }}
+          />
+        </>
       )}
     </div>
   )
