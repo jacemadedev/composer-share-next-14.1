@@ -65,15 +65,19 @@ export default function HomePage() {
   }, [user, refreshSubscription])
 
   useEffect(() => {
-    if (user && (!subscription || subscription.status !== 'active') && plan !== 'premium') {
-      const lastShown = localStorage.getItem('welcomeModalLastShown')
-      const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000 // 7 days in milliseconds
+    if (user && !isLoading) {
+      const isPremium = subscription?.status === 'active' || plan === 'premium'
       
-      if (!lastShown || Date.now() - parseInt(lastShown) > sevenDaysInMs) {
-        setShowWelcomeModal(true)
+      if (!isPremium) {
+        const lastShown = localStorage.getItem('welcomeModalLastShown')
+        const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000
+        
+        if (!lastShown || Date.now() - parseInt(lastShown) > sevenDaysInMs) {
+          setShowWelcomeModal(true)
+        }
       }
     }
-  }, [user, subscription, plan])
+  }, [user, subscription, plan, isLoading])
 
   const handleTopicSelect = (topic: string) => {
     setShowChat(true)
