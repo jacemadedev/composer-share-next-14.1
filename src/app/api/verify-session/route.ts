@@ -11,6 +11,7 @@ export async function GET(req: Request) {
     'Cache-Control': 'no-store, no-cache, must-revalidate',
     'Pragma': 'no-cache',
     'Expires': '0',
+    'Access-Control-Allow-Origin': 'https://kit.composers.dev'
   }
 
   const { searchParams } = new URL(req.url)

@@ -3,7 +3,7 @@ import { Github } from 'lucide-react'
 
 export function Footer() {
   const links = [
-    { href: "https://composers.dev", label: "Home" },
+    { href: "https://kit.composers.dev", label: "Home" },
     { href: "https://github.com/Composers-dev", label: "Documentation" },
     { href: "https://github.com/Composers-dev", label: "Guides" },
     { href: "https://github.com/Composers-dev", label: "Help" },
@@ -15,8 +15,8 @@ export function Footer() {
         <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
           {/* Left side - Links */}
           <div className="flex flex-wrap items-center gap-x-6 gap-y-1 justify-center md:justify-start">
-            <Link href="https://composers.dev" className="text-sm">
-              Composers.dev
+            <Link href="https://kit.composers.dev" className="text-sm">
+              Kit.Composers.dev
             </Link>
             {links.map((link) => (
               <Link

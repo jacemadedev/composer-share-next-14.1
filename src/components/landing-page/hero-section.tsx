@@ -46,7 +46,7 @@ export function HeroSection({ onAuthClick }: HeroSectionProps) {
         The easiest way to<br />develop in bolt.new
       </h1>
       <p className="text-xl text-gray-600 mb-6">
-        #1 Bolt.new & Cursor Boilerplates
+        Kit.Composers.dev - #1 Bolt.new & Cursor Boilerplates
       </p>
 
       {/* Tech Stack Badges */}

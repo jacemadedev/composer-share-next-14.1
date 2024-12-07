@@ -1,0 +1,2 @@
+-- Insert any seed data here if needed
+-- For example, you might want to insert some default settings or test users 

@@ -16,6 +16,11 @@ const nextConfig = {
         protocol: 'https',
         hostname: '*.githubusercontent.com',
         pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'kit.composers.dev',
+        pathname: '/**',
       }
     ],
   },
